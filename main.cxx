@@ -22,6 +22,9 @@
  * Contributor(s): Equivalence Pty. Ltd.
  *
  * $Log$
+ * Revision 1.1  2007/11/21 14:53:51  shorne
+ * First commit to h323plus
+ *
  *
  *
  * 25 Jan 2002 Substantial improvement [Equivalence Pty. Ltd.]
@@ -34,11 +37,7 @@
 #include "version.h"
 
 #include <ptclib/random.h>
-
-#ifdef OPAL_STATIC_LINK
-#define H323_STATIC_LIB
-#include <codec/allcodecs.h>
-#endif
+#include <ptlib/video.h>
 
 
 PCREATE_PROCESS(CallGen);
@@ -77,6 +76,8 @@ void CallGen::Main()
              "-require-gatekeeper."
              "T-h245tunneldisable."
              "t-trace."
+			 "v-video."
+			 "m-maxframe."
              "-tmaxest:"
              "-tmincall:"
              "-tmaxcall:"
@@ -110,6 +111,8 @@ void CallGen::Main()
             "  -p --password pwd    Specify gatekeeper H.235 password [none]\n"
             "  -P --prefer codec    Set codec preference (use multiple times) [none]\n"
             "  -D --disable codec   Disable codec (use multiple times) [none]\n"
+            "  -v --video enable    Enable Video Support\n"
+            "  -m --maxframe        Maximum Frame Size\n"
             "  -f --fast-disable    Disable fast start\n"
             "  -T --h245tunneldisable  Disable H245 tunnelling.\n"
             "  -O --out-msg file    Specify PCM16 WAV file for outgoing message [ogm.wav]\n"
@@ -248,6 +251,19 @@ void CallGen::Main()
     h323->DisableFastStart(TRUE);
   if (args.HasOption('T'))
     h323->DisableH245Tunneling(TRUE);
+
+  if (!args.HasOption('v'))
+    h323->RemoveCapability(H323Capability::e_Video);
+
+  if (args.HasOption('m')) {
+    PCaselessString maxframe = args.GetOptionString('m');
+	if (maxframe == "qcif") 
+		h323->SetVideoFrameSize(H323Capability::qcifMPI);
+	else if (maxframe == "cif") 
+	    h323->SetVideoFrameSize(H323Capability::cifMPI);
+	else if (maxframe == "4cif")
+        h323->SetVideoFrameSize(H323Capability::cif4MPI);
+  }
   
   if (args.HasOption('l')) {
     cout << "Endpoint is listening for incoming calls, press ENTER to exit.\n";
@@ -577,9 +593,6 @@ MyH323EndPoint::MyH323EndPoint()
   // Set capability
   AddAllCapabilities(0, 0, "*");
   AddAllUserInputCapabilities(0, P_MAX_INDEX);
-
-  // remove video capabilities
-  RemoveCapability(H323Capability::e_Video);
 }
 
 H323Connection * MyH323EndPoint::CreateConnection(unsigned callReference)
@@ -675,6 +688,32 @@ BOOL MyH323Connection::OpenAudioChannel(BOOL isEncoding,
   return TRUE;
 }
 
+#ifdef H323_VIDEO
+BOOL MyH323Connection::OpenVideoChannel(BOOL isEncoding, 
+										H323VideoCodec & codec)
+{
+  PString deviceName = isEncoding ? "fake" : "NULL";
+
+  PVideoDevice * device = isEncoding ? (PVideoDevice *)PVideoInputDevice::CreateDeviceByName(deviceName)
+                                     : (PVideoDevice *)PVideoOutputDevice::CreateDeviceByName(deviceName);
+
+  if (!device->SetFrameSize(codec.GetWidth(), codec.GetHeight()) ||
+      !device->SetColourFormatConverter("YUV420P") ||
+      !device->Open(deviceName, TRUE)) {
+    PTRACE(1, "Failed to open or configure the video device \"" << deviceName << '"');
+    return FALSE;
+  }
+
+  PVideoChannel * channel = new PVideoChannel;
+
+  if (isEncoding)
+    channel->AttachVideoReader((PVideoInputDevice *)device);
+  else
+    channel->AttachVideoPlayer((PVideoOutputDevice *)device);
+
+  return codec.AttachChannel(channel,TRUE);
+};
+#endif
 
 ///////////////////////////////////////////////////////////////////////////////
 

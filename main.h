@@ -22,6 +22,9 @@
  * Contributor(s): Equivalence Pty. Ltd.
  *
  * $Log$
+ * Revision 1.1  2007/11/21 14:53:51  shorne
+ * First commit to h323plus
+ *
  *
  *
  * 25 Jan 2002 Substantial improvement [Equivalence Pty. Ltd.]
@@ -99,6 +102,12 @@ class MyH323Connection : public H323Connection
       unsigned bufferSize,          /// Size of each sound buffer
       H323AudioCodec & codec        /// codec that is doing the opening
     );
+    
+#ifdef H323_VIDEO
+    virtual BOOL OpenVideoChannel(BOOL isEncoding, 
+								  H323VideoCodec & codec
+	);
+#endif
 
     virtual void OnRTPStatistics(
       const RTP_Session & session   /// Session with statistics
