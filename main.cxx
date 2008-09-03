@@ -22,6 +22,9 @@
  * Contributor(s): Equivalence Pty. Ltd.
  *
  * $Log$
+ * Revision 1.2  2008/02/07 10:13:32  shorne
+ * added video support
+ *
  * Revision 1.1  2007/11/21 14:53:51  shorne
  * First commit to h323plus
  *
@@ -322,7 +325,7 @@ void CallGen::Main()
       threadEnded.Wait();
       PThread::Sleep(100);
 
-      BOOL finished = TRUE;
+      PBoolean finished = TRUE;
       for (PINDEX i = 0; i < threadList.GetSize(); i++) {
         if (!threadList[i].IsTerminated()) {
           finished = FALSE;
@@ -442,7 +445,7 @@ void CallThread::Main()
     if (!callgen.Start(destination, token))
       PError << setw(3) << index << ": Call creation to " << destination << " failed" << endl;
     else {
-      BOOL stopping = FALSE;
+      PBoolean stopping = FALSE;
 
       delay = RandomRange(rand, params.tmin_call, params.tmax_call);
 
@@ -633,7 +636,7 @@ void MyH323EndPoint::OnConnectionCleared(H323Connection & connection,
 }
 
 
-BOOL MyH323EndPoint::OnStartLogicalChannel(H323Connection & connection,
+PBoolean MyH323EndPoint::OnStartLogicalChannel(H323Connection & connection,
                                            H323Channel & channel)
 {
   (channel.GetDirection() == H323Channel::IsTransmitter
@@ -663,7 +666,7 @@ void MyH323Connection::OnRTPStatistics(const RTP_Session & session) const
 }
 
 
-BOOL MyH323Connection::OpenAudioChannel(BOOL isEncoding,
+PBoolean MyH323Connection::OpenAudioChannel(PBoolean isEncoding,
                                         unsigned bufferSize,
                                         H323AudioCodec & codec)
 {
@@ -689,7 +692,7 @@ BOOL MyH323Connection::OpenAudioChannel(BOOL isEncoding,
 }
 
 #ifdef H323_VIDEO
-BOOL MyH323Connection::OpenVideoChannel(BOOL isEncoding, 
+PBoolean MyH323Connection::OpenVideoChannel(PBoolean isEncoding, 
 										H323VideoCodec & codec)
 {
   PString deviceName = isEncoding ? "fake" : "NULL";
@@ -738,7 +741,7 @@ PlayMessage::PlayMessage(const PString & filename,
 }
 
 
-BOOL PlayMessage::Read(void * buf, PINDEX len)
+PBoolean PlayMessage::Read(void * buf, PINDEX len)
 {
   if (PDelayChannel::Read(buf, len))
     return TRUE;
@@ -760,7 +763,7 @@ BOOL PlayMessage::Read(void * buf, PINDEX len)
 }
 
 
-BOOL PlayMessage::Close()
+PBoolean PlayMessage::Close()
 {
   reallyClose = TRUE;
   return PDelayChannel::Close();
@@ -789,7 +792,7 @@ RecordMessage::RecordMessage(const PString & wavFileName,
 }
 
 
-BOOL RecordMessage::Write(const void * buf, PINDEX len)
+PBoolean RecordMessage::Write(const void * buf, PINDEX len)
 {
   if (PDelayChannel::Write(buf, len))
     return TRUE;
@@ -799,7 +802,7 @@ BOOL RecordMessage::Write(const void * buf, PINDEX len)
 }
 
 
-BOOL RecordMessage::Close()
+PBoolean RecordMessage::Close()
 {
   reallyClose = TRUE;
   return PDelayChannel::Close();

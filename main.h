@@ -22,6 +22,9 @@
  * Contributor(s): Equivalence Pty. Ltd.
  *
  * $Log$
+ * Revision 1.2  2008/02/07 10:13:32  shorne
+ * added video support
+ *
  * Revision 1.1  2007/11/21 14:53:51  shorne
  * First commit to h323plus
  *
@@ -45,11 +48,11 @@ class PlayMessage : public PDelayChannel
     PCLASSINFO(PlayMessage, PDelayChannel);
   public:
     PlayMessage(const PString & filename, unsigned frameDelay, unsigned frameSize);
-    virtual BOOL Read(void *, PINDEX);
-    virtual BOOL Close();
+    virtual PBoolean Read(void *, PINDEX);
+    virtual PBoolean Close();
   protected:
     PWAVFile wavFile;
-    BOOL     reallyClose;
+    PBoolean reallyClose;
 };
 
 
@@ -60,10 +63,10 @@ class RecordMessage : public PDelayChannel
     PCLASSINFO(RecordMessage, PDelayChannel);
   public:
     RecordMessage(const PString & filename, unsigned frameDelay, unsigned frameSize);
-    virtual BOOL Write(const void *, PINDEX);
-    virtual BOOL Close();
+    virtual PBoolean Write(const void *, PINDEX);
+    virtual PBoolean Close();
   protected:
-    BOOL reallyClose;
+    PBoolean reallyClose;
 };
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -97,14 +100,14 @@ class MyH323Connection : public H323Connection
   public:
     MyH323Connection(MyH323EndPoint & ep,unsigned callRef);
 
-    virtual BOOL OpenAudioChannel(
-      BOOL isEncoding,              /// Direction of data flow
+    virtual PBoolean OpenAudioChannel(
+      PBoolean isEncoding,          /// Direction of data flow
       unsigned bufferSize,          /// Size of each sound buffer
       H323AudioCodec & codec        /// codec that is doing the opening
     );
     
 #ifdef H323_VIDEO
-    virtual BOOL OpenVideoChannel(BOOL isEncoding, 
+    virtual PBoolean OpenVideoChannel(PBoolean isEncoding, 
 								  H323VideoCodec & codec
 	);
 #endif
@@ -139,7 +142,7 @@ class MyH323EndPoint : public H323EndPoint
       H323Connection & connection,    /// Connection that was established
       const PString & token           /// Token for identifying connection
     );
-    BOOL OnStartLogicalChannel(
+    PBoolean OnStartLogicalChannel(
       H323Connection & connection,
       H323Channel & PTRACE_channel
     );
@@ -211,16 +214,16 @@ class CallGen : public PProcess
 
   MyH323EndPoint * h323;
 
-  BOOL Start(const PString & destination, PString & token) {
+  PBoolean Start(const PString & destination, PString & token) {
     return h323->MakeCall(destination, token) != NULL;
   }
-  BOOL Exists(const PString & token) {
+  PBoolean Exists(const PString & token) {
     return h323->HasConnection(token);
   }
-  BOOL IsEstablished(const PString & token) {
+  PBoolean IsEstablished(const PString & token) {
     return h323->IsConnectionEstablished(token);
   }
-  BOOL Clear(PString & token) {
+  PBoolean Clear(PString & token) {
     return h323->ClearCallSynchronous(token);
   }
   void ClearAll() {
