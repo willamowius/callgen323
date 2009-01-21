@@ -22,6 +22,9 @@
  * Contributor(s): Equivalence Pty. Ltd.
  *
  * $Log$
+ * Revision 1.3  2008/09/03 12:21:24  willamowius
+ * switch BOOL to PBoolean to be able to compile with Ptlib 2.2.x
+ *
  * Revision 1.2  2008/02/07 10:13:32  shorne
  * added video support
  *
@@ -49,7 +52,7 @@ PCREATE_PROCESS(CallGen);
 ///////////////////////////////////////////////////////////////////////////////
 
 CallGen::CallGen()
-  : PProcess("Equivalence", "CallGen", MAJOR_VERSION, MINOR_VERSION, BUILD_TYPE, BUILD_NUMBER),
+  : PProcess("H323Plus", "CallGen", MAJOR_VERSION, MINOR_VERSION, BUILD_TYPE, BUILD_NUMBER),
     console(PConsoleChannel::StandardInput)
 {
   totalAttempts = 0;
