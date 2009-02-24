@@ -22,6 +22,9 @@
  * Contributor(s): Equivalence Pty. Ltd.
  *
  * $Log$
+ * Revision 1.3  2008/09/03 12:21:24  willamowius
+ * switch BOOL to PBoolean to be able to compile with Ptlib 2.2.x
+ *
  * Revision 1.2  2008/02/07 10:13:32  shorne
  * added video support
  *
@@ -40,6 +43,10 @@
 #include <ptclib/pwavfile.h>
 
 #include <h323.h>
+
+#if !defined(P_USE_STANDARD_CXX_BOOL) && !defined(P_USE_INTEGER_BOOL)
+    typedef int PBoolean;
+#endif
 
 ///////////////////////////////////////////////////////////////////////////////
 
