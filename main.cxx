@@ -22,6 +22,9 @@
  * Contributor(s): Equivalence Pty. Ltd.
  *
  * $Log$
+ * Revision 1.4  2009/01/21 01:26:52  willamowius
+ * fixed OpenIVR application for current H323Plus/PTLib
+ *
  * Revision 1.3  2008/09/03 12:21:24  willamowius
  * switch BOOL to PBoolean to be able to compile with Ptlib 2.2.x
  *
@@ -760,7 +763,7 @@ PBoolean PlayMessage::Read(void * buf, PINDEX len)
   }
 
   // Just play out silence
-  memset(buf, len, 0);
+  memset(buf, 0, len);
   lastReadCount = len;
   return TRUE;
 }
