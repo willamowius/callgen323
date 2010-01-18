@@ -22,6 +22,9 @@
  * Contributor(s): Equivalence Pty. Ltd.
  *
  * $Log$
+ * Revision 1.6  2010/01/18 22:06:09  willamowius
+ * check device pointer before using it
+ *
  * Revision 1.5  2010/01/18 21:11:51  willamowius
  * fix bug in usage of memset()
  *
@@ -275,6 +278,8 @@ void CallGen::Main()
 	    h323->SetVideoFrameSize(H323Capability::cifMPI);
 	else if (maxframe == "4cif")
         h323->SetVideoFrameSize(H323Capability::cif4MPI);
+	else if (maxframe == "16cif")
+        h323->SetVideoFrameSize(H323Capability::cif16MPI);
   }
   
   if (args.HasOption('l')) {
@@ -704,7 +709,7 @@ PBoolean MyH323Connection::OpenAudioChannel(PBoolean isEncoding,
 PBoolean MyH323Connection::OpenVideoChannel(PBoolean isEncoding, 
 										H323VideoCodec & codec)
 {
-  PString deviceName = isEncoding ? "fake" : "NULL";
+  PString deviceName = isEncoding ? "Fake/BouncingBoxes" : "NULL";
 
   PVideoDevice * device = isEncoding ? (PVideoDevice *)PVideoInputDevice::CreateDeviceByName(deviceName)
                                      : (PVideoDevice *)PVideoOutputDevice::CreateDeviceByName(deviceName);
