@@ -22,6 +22,9 @@
  * Contributor(s): Equivalence Pty. Ltd.
  *
  * $Log$
+ * Revision 1.5  2010/01/18 21:11:51  willamowius
+ * fix bug in usage of memset()
+ *
  * Revision 1.4  2009/01/21 01:26:52  willamowius
  * fixed OpenIVR application for current H323Plus/PTLib
  *
@@ -706,7 +709,8 @@ PBoolean MyH323Connection::OpenVideoChannel(PBoolean isEncoding,
   PVideoDevice * device = isEncoding ? (PVideoDevice *)PVideoInputDevice::CreateDeviceByName(deviceName)
                                      : (PVideoDevice *)PVideoOutputDevice::CreateDeviceByName(deviceName);
 
-  if (!device->SetFrameSize(codec.GetWidth(), codec.GetHeight()) ||
+  if (!device ||
+	  !device->SetFrameSize(codec.GetWidth(), codec.GetHeight()) ||
       !device->SetColourFormatConverter("YUV420P") ||
       !device->Open(deviceName, TRUE)) {
     PTRACE(1, "Failed to open or configure the video device \"" << deviceName << '"');
