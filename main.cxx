@@ -22,6 +22,9 @@
  * Contributor(s): Equivalence Pty. Ltd.
  *
  * $Log$
+ * Revision 1.7  2010/01/18 22:32:21  willamowius
+ * add support for 16cif
+ *
  * Revision 1.6  2010/01/18 22:06:09  willamowius
  * check device pointer before using it
  *
@@ -92,7 +95,7 @@ void CallGen::Main()
              "T-h245tunneldisable."
              "t-trace."
 			 "v-video."
-			 "m-maxframe."
+			 "-maxframe."
              "-tmaxest:"
              "-tmincall:"
              "-tmaxcall:"
@@ -127,7 +130,7 @@ void CallGen::Main()
             "  -P --prefer codec    Set codec preference (use multiple times) [none]\n"
             "  -D --disable codec   Disable codec (use multiple times) [none]\n"
             "  -v --video enable    Enable Video Support\n"
-            "  -m --maxframe        Maximum Frame Size\n"
+            "  --maxframe           Maximum Frame Size\n"
             "  -f --fast-disable    Disable fast start\n"
             "  -T --h245tunneldisable  Disable H245 tunnelling.\n"
             "  -O --out-msg file    Specify PCM16 WAV file for outgoing message [ogm.wav]\n"
@@ -270,8 +273,8 @@ void CallGen::Main()
   if (!args.HasOption('v'))
     h323->RemoveCapability(H323Capability::e_Video);
 
-  if (args.HasOption('m')) {
-    PCaselessString maxframe = args.GetOptionString('m');
+  if (args.HasOption("maxframe")) {
+    PCaselessString maxframe = args.GetOptionString("maxframe");
 	if (maxframe == "qcif") 
 		h323->SetVideoFrameSize(H323Capability::qcifMPI);
 	else if (maxframe == "cif") 
