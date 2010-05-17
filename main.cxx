@@ -22,6 +22,9 @@
  * Contributor(s): Equivalence Pty. Ltd.
  *
  * $Log$
+ * Revision 1.8  2010/04/13 10:08:53  willamowius
+ * -m was used for 2 different switches
+ *
  * Revision 1.7  2010/01/18 22:32:21  willamowius
  * add support for 16cif
  *
@@ -56,7 +59,9 @@
 
 #include <ptclib/random.h>
 #include <ptlib/video.h>
-
+#ifndef _WIN32
+#include <signal.h>
+#endif
 
 PCREATE_PROCESS(CallGen);
 
@@ -74,6 +79,10 @@ CallGen::CallGen()
 
 void CallGen::Main()
 {
+#ifndef _WIN32
+  signal(SIGCHLD, SIG_IGN);	// avoid zombies from H.264 plugin helper
+#endif
+
   PArgList & args = GetArguments();
   args.Parse("a-access-token-oid:"
              "c-cdr:"
