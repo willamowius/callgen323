@@ -22,6 +22,9 @@
  * Contributor(s): Equivalence Pty. Ltd.
  *
  * $Log$
+ * Revision 1.9  2010/05/17 14:51:35  willamowius
+ * avoid zombies from H.264 plugin helper
+ *
  * Revision 1.8  2010/04/13 10:08:53  willamowius
  * -m was used for 2 different switches
  *
@@ -282,6 +285,7 @@ void CallGen::Main()
   if (!args.HasOption('v'))
     h323->RemoveCapability(H323Capability::e_Video);
 
+#ifdef H323_VIDEO
   if (args.HasOption("maxframe")) {
     PCaselessString maxframe = args.GetOptionString("maxframe");
 	if (maxframe == "qcif") 
@@ -293,7 +297,8 @@ void CallGen::Main()
 	else if (maxframe == "16cif")
         h323->SetVideoFrameSize(H323Capability::cif16MPI);
   }
-  
+#endif
+ 
   if (args.HasOption('l')) {
     cout << "Endpoint is listening for incoming calls, press ENTER to exit.\n";
     console.ReadChar();
