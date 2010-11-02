@@ -22,6 +22,9 @@
  * Contributor(s): Equivalence Pty. Ltd.
  *
  * $Log$
+ * Revision 1.10  2010/05/25 20:17:14  willamowius
+ * fix compile without video enabled
+ *
  * Revision 1.9  2010/05/17 14:51:35  willamowius
  * avoid zombies from H.264 plugin helper
  *
@@ -172,7 +175,7 @@ void CallGen::Main()
 #if PTRACING
   PTrace::Initialise(args.GetOptionCount('t'),
                      args.HasOption('o') ? (const char *)args.GetOptionString('o') : NULL,
-		     PTrace::Blocks | PTrace::DateAndTime | PTrace::Thread | PTrace::FileAndLine);
+		             PTrace::DateAndTime | PTrace::TraceLevel | PTrace::FileAndLine);
 #endif
 
   h323 = new MyH323EndPoint();
