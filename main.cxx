@@ -22,6 +22,9 @@
  * Contributor(s): Equivalence Pty. Ltd.
  *
  * $Log$
+ * Revision 1.11  2010/11/02 11:14:34  willamowius
+ * use same trace format as GnuGk
+ *
  * Revision 1.10  2010/05/25 20:17:14  willamowius
  * fix compile without video enabled
  *
@@ -96,6 +99,9 @@ void CallGen::Main()
              "D-disable:"
              "f-fast-disable."
              "g-gatekeeper:"
+#ifdef H323_H46017
+             "k-h46017:"
+#endif
              "I-in-dir:"
              "i-interface:"
              "l-listen."
@@ -138,6 +144,9 @@ void CallGen::Main()
             "  -o --output file     Specify filename for trace output [stdout]\n"
             "  -i --interface addr  Specify IP address and port listen on [*:1720]\n"
             "  -g --gatekeeper host Specify gatekeeper host [auto-discover]\n"
+#ifdef H323_H46017
+            "  -k --h46017         : Use H.460.17 Gatekeeper.\n"
+#endif
             "  -n --no-gatekeeper   Disable gatekeeper discovery [false]\n"
             "  --require-gatekeeper Exit if gatekeeper discovery fails [false]\n"
             "  -u --user username   Specify local username [login name]\n"
@@ -259,6 +268,18 @@ void CallGen::Main()
   }
   
   // process gatekeeper registration options
+#ifdef H323_H46017
+  if (args.HasOption('k')) {
+    PString gk17 = args.GetOptionString('k');
+    if (h323->H46017CreateConnection(gk17, false)) {
+      PTRACE(2, "Using H.460.17 Gatekeeper Tunneling.");
+    } else {
+      PTRACE(1, "Error: H.460.17 Gatekeeper Tunneling Failed: Gatekeeper=" << gk17);
+      return;
+    }
+  } else
+#endif
+  {
   if (args.HasOption('g')) {
     PString gkAddr = args.GetOptionString('g');
     cout << "Registering with gatekeeper \"" << gkAddr << "\" ..." << flush;
@@ -278,6 +299,7 @@ void CallGen::Main()
       if (args.HasOption("require-gatekeeper")) 
         return;
     }
+  }
   }
 
   if (args.HasOption('f'))
@@ -627,6 +649,9 @@ void CallDetail::OnRTPStatistics(const RTP_Session & session, const PString & to
 
 MyH323EndPoint::MyH323EndPoint()
 {
+  // load plugins for H.460.17, .18 etc.
+  LoadBaseFeatureSet();
+
   // Set capability
   AddAllCapabilities(0, 0, "*");
   AddAllUserInputCapabilities(0, P_MAX_INDEX);
