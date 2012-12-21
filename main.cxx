@@ -22,6 +22,9 @@
  * Contributor(s): Equivalence Pty. Ltd.
  *
  * $Log$
+ * Revision 1.12  2012/11/03 01:11:07  willamowius
+ * add H.460.17 support
+ *
  * Revision 1.11  2010/11/02 11:14:34  willamowius
  * use same trace format as GnuGk
  *
@@ -145,7 +148,7 @@ void CallGen::Main()
             "  -i --interface addr  Specify IP address and port listen on [*:1720]\n"
             "  -g --gatekeeper host Specify gatekeeper host [auto-discover]\n"
 #ifdef H323_H46017
-            "  -k --h46017         : Use H.460.17 Gatekeeper.\n"
+            "  -k --h46017          Use H.460.17 Gatekeeper.\n"
 #endif
             "  -n --no-gatekeeper   Disable gatekeeper discovery [false]\n"
             "  --require-gatekeeper Exit if gatekeeper discovery fails [false]\n"
@@ -188,7 +191,6 @@ void CallGen::Main()
 #endif
 
   h323 = new MyH323EndPoint();
-
 
   outgoingMessageFile = args.GetOptionString('O', "ogm.wav");
   if (outgoingMessageFile.IsEmpty())
@@ -274,7 +276,7 @@ void CallGen::Main()
     if (h323->H46017CreateConnection(gk17, false)) {
       PTRACE(2, "Using H.460.17 Gatekeeper Tunneling.");
     } else {
-      PTRACE(1, "Error: H.460.17 Gatekeeper Tunneling Failed: Gatekeeper=" << gk17);
+      cout << "Error: H.460.17 Gatekeeper Tunneling Failed: Gatekeeper=" << gk17 << endl;
       return;
     }
   } else
