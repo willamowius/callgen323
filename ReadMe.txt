@@ -3,12 +3,6 @@ H.323 Call Generator
 v 2.1.0, Nov 2017
 =================
 
-Update to support H.460.x and many bug fixes.
-
-
-v 0.1.3, 26 Jan 2000
-====================
-
 Don't expect it to do fancy things like playing/recording sounds/DTMF yet. 
 
 What you can do with this call generator: 
@@ -16,8 +10,8 @@ What you can do with this call generator:
  - receiving an exact number of calls. 
  - adjust the delay between each batch of calls. 
  - set the number of batches to repeat. 
- - The only capability supported is G.711 ULaw 64k and user
-   indication.
+ - The capability supported are G.711 ULaw 64k, user
+   indication and plugin video codecs.
 
 HOW TO GET
 ==========
@@ -27,11 +21,9 @@ https://github.com/willamowius/callgen323
 HOW TO COMPILE
 ==============
   In Win32 platform
-  - Follow the instructions on how to build openh323/voxilla.
-  - When opening the workspace, you'll be prompted for the location of
-    OpenH323.dsp. Give the location of your OpenH323.dsp.
+  - Follow the instructions on how to build H323Plus.
   - When changing active build configuration, make sure you specify
-    the correct OpenH323 library directory in Tools/Options.
+    the correct H323Plus library directory in Tools/Options.
   - You are on your own now.
 
   In Linux platform:
