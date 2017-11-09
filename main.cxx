@@ -833,36 +833,32 @@ PlayMessage::PlayMessage(const PString & filename,
       PTRACE(2, "CallGen\tCould not open outgoing message file \"" << wavFile.GetFilePath() << '"');
     }
   }
-
-  reallyClose = FALSE;
 }
 
 
 PBoolean PlayMessage::Read(void * buf, PINDEX len)
 {
-  if (PDelayChannel::Read(buf, len))
+  if (!wavFile.IsOpen()) {
+    // Just play out silence
+    memset(buf, 0, len);
+    lastReadCount = len;
     return TRUE;
-
-  if (reallyClose)
-    return FALSE;
-
-  // By opening the file as soon as we get a read error, we continually play
-  // out the outgoing message as the usual error is end of file.
-  if (wavFile.Open(PFile::ReadOnly)) {
-    if (PDelayChannel::Read(buf, len))
-      return TRUE;
   }
 
-  // Just play out silence
-  memset(buf, 0, len);
-  lastReadCount = len;
-  return TRUE;
+  if (PDelayChannel::Read(buf, len)) {
+    // at end of file, re-open and start reading again
+    if (lastReadCount < len) {
+        wavFile.Open(PFile::ReadOnly);
+        PDelayChannel::Read(buf, len);
+    }
+    return TRUE;
+  }
+  return FALSE;
 }
 
 
 PBoolean PlayMessage::Close()
 {
-  reallyClose = TRUE;
   return PDelayChannel::Close();
 }
 

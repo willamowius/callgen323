@@ -59,7 +59,6 @@ class PlayMessage : public PDelayChannel
     virtual PBoolean Close();
   protected:
     PWAVFile wavFile;
-    PBoolean reallyClose;
 };
 
 
