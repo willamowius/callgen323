@@ -796,6 +796,47 @@ PBoolean MyH323Connection::OpenVideoChannel(PBoolean isEncoding,
   PVideoDevice * device = isEncoding ? (PVideoDevice *)PVideoInputDevice::CreateDeviceByName(deviceName)
                                      : (PVideoDevice *)PVideoOutputDevice::CreateDeviceByName(deviceName);
 
+  // codec needs a list of possible formats, otherwise the frame size isn't negotiated properly
+#if PTLIB_VER >= 2110
+  if (isEncoding) {
+      PVideoInputDevice::Capabilities videoCaps;
+      if (((PVideoInputDevice *)device)->GetDeviceCapabilities(deviceName,deviceDriver,&videoCaps)) {
+          codec.SetSupportedFormats(videoCaps.framesizes);
+      } else {
+        // set fixed list of resolutions for drivers that don't provide a list
+        PVideoInputDevice::Capabilities caps;
+        PVideoFrameInfo cap;
+        cap.SetColourFormat("YUV420P");
+        cap.SetFrameRate(30);
+        // sizes must be from largest to smallest
+        cap.SetFrameSize(1280, 720);
+        caps.framesizes.push_back(cap);
+        cap.SetFrameSize(704, 576);
+        caps.framesizes.push_back(cap);
+        cap.SetFrameSize(352, 288);
+        caps.framesizes.push_back(cap);
+        codec.SetSupportedFormats(caps.framesizes);
+      }
+  }
+#else
+  if (isEncoding) {
+    PVideoInputDevice::Capabilities caps;
+    PVideoFrameInfo cap;
+    cap.SetColourFormat("YUV420P");
+    cap.SetFrameRate(30);
+    // sizes must be from largest to smallest
+    cap.SetFrameSize(1280, 720);
+    caps.framesizes.push_back(cap);
+    cap.SetFrameSize(704, 576);
+    caps.framesizes.push_back(cap);
+    cap.SetFrameSize(640, 400);
+    caps.framesizes.push_back(cap);
+    cap.SetFrameSize(352, 288);
+    caps.framesizes.push_back(cap);
+    codec.SetSupportedFormats(caps.framesizes);
+  }
+#endif
+
   if (!device ||
 	  !device->SetFrameSize(codec.GetWidth(), codec.GetHeight()) ||
       !device->SetColourFormatConverter("YUV420P") ||
