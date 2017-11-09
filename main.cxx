@@ -1,7 +1,7 @@
 /*
  * main.cxx
  *
- * OpenH323 call generator
+ * H.323 call generator
  *
  * Copyright (c) 2001 Benny L. Prijono <seventhson@theseventhson.freeserve.co.uk>
  *
@@ -65,7 +65,7 @@
  *             related codes [bennylp]
  */
 
-#include "precompile.h"
+#include <ptlib.h>
 #include "main.h"
 #include "version.h"
 
@@ -86,6 +86,7 @@ CallGen::CallGen()
 {
   totalAttempts = 0;
   totalEstablished = 0;
+  h323 = NULL;
 }
 
 
@@ -104,6 +105,15 @@ void CallGen::Main()
              "g-gatekeeper:"
 #ifdef H323_H46017
              "k-h46017:"
+#endif
+#ifdef H323_H46018
+             "-h46018enable."
+#endif
+#ifdef H323_H46019M
+             "-h46019multiplexenable."
+#endif
+#ifdef H323_H46023
+             "-h46023enable."
 #endif
              "I-in-dir:"
              "i-interface:"
@@ -133,13 +143,13 @@ void CallGen::Main()
              "-rtp-max:"
              "u-user:"
              , FALSE);
-  
+
   if (args.GetCount() == 0 && !args.HasOption('l')) {
     cout << "Usage:\n"
             "  callgen [options] -l\n"
             "  callgen [options] destination [ destination ... ]\n"
             "where options:\n"
-            "  -l                   Passive/listening mode.\n"
+            "  -l                   Passive/listening mode\n"
             "  -m --max num         Maximum number of simultaneous calls\n"
             "  -r --repeat num      Repeat calls n times\n"
             "  -C --cycle           Each simultaneous call cycles through destination list\n"
@@ -148,7 +158,16 @@ void CallGen::Main()
             "  -i --interface addr  Specify IP address and port listen on [*:1720]\n"
             "  -g --gatekeeper host Specify gatekeeper host [auto-discover]\n"
 #ifdef H323_H46017
-            "  -k --h46017          Use H.460.17 Gatekeeper.\n"
+            "  -k --h46017          Use H.460.17 Gatekeeper\n"
+#endif
+#ifdef H323_H46018
+            "  --h46018enable       Enable H.460.18/.19\n"
+#endif
+#ifdef H323_H46019M
+            "  --h46019multiplexenable  Enable H.460.19 RTP multiplexing\n"
+#endif
+#ifdef H323_H46023
+            "  --h46023enable       Enable H.460.23/.24\n"
 #endif
             "  -n --no-gatekeeper   Disable gatekeeper discovery [false]\n"
             "  --require-gatekeeper Exit if gatekeeper discovery fails [false]\n"
@@ -159,16 +178,16 @@ void CallGen::Main()
             "  -v --video enable    Enable Video Support\n"
             "  --maxframe           Maximum Frame Size\n"
             "  -f --fast-disable    Disable fast start\n"
-            "  -T --h245tunneldisable  Disable H245 tunnelling.\n"
+            "  -T --h245tunneldisable  Disable H245 tunnelling\n"
             "  -O --out-msg file    Specify PCM16 WAV file for outgoing message [ogm.wav]\n"
             "  -I --in-dir dir      Specify directory for incoming WAV files [disabled]\n"
             "  -c --cdr file        Specify Call Detail Record file [none]\n"
-            "  --tcp-base port      Specific the base TCP port to use.\n"
-            "  --tcp-max port       Specific the maximum TCP port to use.\n"
-            "  --udp-base port      Specific the base UDP port to use.\n"
-            "  --udp-max port       Specific the maximum UDP port to use.\n"
-            "  --rtp-base port      Specific the base RTP/RTCP pair of UDP port to use.\n"
-            "  --rtp-max port       Specific the maximum RTP/RTCP pair of UDP port to use.\n"
+            "  --tcp-base port      Specific the base TCP port to use\n"
+            "  --tcp-max port       Specific the maximum TCP port to use\n"
+            "  --udp-base port      Specific the base UDP port to use\n"
+            "  --udp-max port       Specific the maximum UDP port to use\n"
+            "  --rtp-base port      Specific the base RTP/RTCP pair of UDP port to use\n"
+            "  --rtp-max port       Specific the maximum RTP/RTCP pair of UDP port to use\n"
             "  --tmaxest  secs      Maximum time to wait for \"Established\" [0]\n"
             "  --tmincall secs      Minimum call duration in seconds [10]\n"
             "  --tmaxcall secs      Maximum call duration in seconds [30]\n"
@@ -183,7 +202,7 @@ void CallGen::Main()
             "\n";
     return;
   }
-  
+
 #if PTRACING
   PTrace::Initialise(args.GetOptionCount('t'),
                      args.HasOption('o') ? (const char *)args.GetOptionString('o') : NULL,
@@ -258,7 +277,7 @@ void CallGen::Main()
       h323->AddAliasName(aliases[i]);
   }
   cout << "Local username: \"" << h323->GetLocalUserName() << '"' << endl;
-  
+
   if (args.HasOption('p')) {
     h323->SetGatekeeperPassword(args.GetOptionString('p'));
     cout << "Using H.235 security." << endl;
@@ -268,7 +287,7 @@ void CallGen::Main()
     h323->SetGkAccessTokenOID(args.GetOptionString('a'));
     cout << "Set Access Token OID to \"" << h323->GetGkAccessTokenOID() << '"' << endl;
   }
-  
+
   // process gatekeeper registration options
 #ifdef H323_H46017
   if (args.HasOption('k')) {
@@ -283,6 +302,19 @@ void CallGen::Main()
 #endif
   {
   if (args.HasOption('g')) {
+#ifdef H323_H46018
+    cout << "H.460.18/.19: " << (args.HasOption("h46018enable") ? "enabled" : "disabled") << endl;
+    h323->H46018Enable(args.HasOption("h46018enable"));
+#endif
+#ifdef H323_H46019M
+    cout << "H.460.19 RTP multiplexing: " << (args.HasOption("h46019multiplexenable") ? "enabled" : "disabled") << endl;
+    h323->H46019MEnable(args.HasOption("h46019multiplexenable"));
+    h323->H46019MSending(args.HasOption("h46019multiplexenable"));
+#endif
+#ifdef H323_H46023
+    cout << "H.460.23/.24: " << (args.HasOption("h46023enable") ? "enabled" : "disabled") << endl;
+    h323->H46023Enable(args.HasOption("h46023enable"));
+#endif
     PString gkAddr = args.GetOptionString('g');
     cout << "Registering with gatekeeper \"" << gkAddr << "\" ..." << flush;
     if (h323->UseGatekeeper(gkAddr))
@@ -298,7 +330,7 @@ void CallGen::Main()
       cout << "\nGatekeeper found: " << *h323->GetGatekeeper() << endl;
     else {
       cout << "\nNo gatekeeper found." << endl;
-      if (args.HasOption("require-gatekeeper")) 
+      if (args.HasOption("require-gatekeeper"))
         return;
     }
   }
@@ -315,9 +347,9 @@ void CallGen::Main()
 #ifdef H323_VIDEO
   if (args.HasOption("maxframe")) {
     PCaselessString maxframe = args.GetOptionString("maxframe");
-	if (maxframe == "qcif") 
+	if (maxframe == "qcif")
 		h323->SetVideoFrameSize(H323Capability::qcifMPI);
-	else if (maxframe == "cif") 
+	else if (maxframe == "cif")
 	    h323->SetVideoFrameSize(H323Capability::cifMPI);
 	else if (maxframe == "4cif")
         h323->SetVideoFrameSize(H323Capability::cif4MPI);
@@ -325,7 +357,7 @@ void CallGen::Main()
         h323->SetVideoFrameSize(H323Capability::cif16MPI);
   }
 #endif
- 
+
   if (args.HasOption('l')) {
     cout << "Endpoint is listening for incoming calls, press ENTER to exit.\n";
     console.ReadChar();
@@ -402,6 +434,9 @@ void CallGen::Main()
   if (totalAttempts > 0)
     cout << "Total calls: " << totalAttempts
          << " attempted, " << totalEstablished << " established\n";
+
+  // delete endpoint object so we unregister cleanly
+  delete h323;
 }
 
 
@@ -426,7 +461,7 @@ void CallGen::Cancel(PThread &, INT)
   coutMutex.Wait();
   cout << "\nAborting all calls ..." << endl;
   coutMutex.Signal();
-  
+
   // stop threads
   for (PINDEX i = 0; i < threadList.GetSize(); i++)
     threadList[i].Stop();
@@ -642,7 +677,7 @@ void CallDetail::OnRTPStatistics(const RTP_Session & session, const PString & to
     OUTPUT("", token, "Received media");
 
     const RTP_UDP * udpSess = dynamic_cast<const RTP_UDP *>(&session);
-    if (udpSess != NULL) 
+    if (udpSess != NULL)
       mediaGateway = H323TransportAddress(udpSess->GetRemoteAddress(), udpSess->GetRemoteDataPort());
   }
 }
@@ -753,7 +788,7 @@ PBoolean MyH323Connection::OpenAudioChannel(PBoolean isEncoding,
 }
 
 #ifdef H323_VIDEO
-PBoolean MyH323Connection::OpenVideoChannel(PBoolean isEncoding, 
+PBoolean MyH323Connection::OpenVideoChannel(PBoolean isEncoding,
 										H323VideoCodec & codec)
 {
   PString deviceName = isEncoding ? "Fake/BouncingBoxes" : "NULL";

@@ -112,9 +112,9 @@ class MyH323Connection : public H323Connection
       unsigned bufferSize,          /// Size of each sound buffer
       H323AudioCodec & codec        /// codec that is doing the opening
     );
-    
+
 #ifdef H323_VIDEO
-    virtual PBoolean OpenVideoChannel(PBoolean isEncoding, 
+    virtual PBoolean OpenVideoChannel(PBoolean isEncoding,
 								  H323VideoCodec & codec
 	);
 #endif
@@ -132,7 +132,7 @@ class MyH323Connection : public H323Connection
 
 ///////////////////////////////////////////////////////////////////////////////
 
-class MyH323EndPoint : public H323EndPoint 
+class MyH323EndPoint : public H323EndPoint
 {
     PCLASSINFO(MyH323EndPoint, H323EndPoint);
   public:
@@ -162,7 +162,7 @@ class CallGen;
 struct CallParams
 {
   CallParams(CallGen & app)
-    : callgen(app) { }
+    : callgen(app), repeat(0) { }
 
   CallGen & callgen;
 
@@ -201,7 +201,7 @@ PLIST(CallThreadList, CallThread);
 
 ///////////////////////////////////////////////////////////////////////////////
 
-class CallGen : public PProcess 
+class CallGen : public PProcess
 {
   PCLASSINFO(CallGen, PProcess)
 
