@@ -17,5 +17,5 @@ include $(OPENH323DIR)/openh323u.mak
 STDCCFLAGS += -Wno-unused-variable
 
 # dependencies
-$(OBJDIR)/main.o: main.h
+$(OBJDIR)/main.o: main.h version.h
 

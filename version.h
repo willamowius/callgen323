@@ -32,12 +32,10 @@
 #define _CallGen_VERSION_H
 
 #define MAJOR_VERSION 2
-#define MINOR_VERSION 0
+#define MINOR_VERSION 1
 #define BUILD_TYPE    ReleaseCode
-#define BUILD_NUMBER 1
+#define BUILD_NUMBER 0
 
 
 #endif  // _CallGen_VERSION_H
 
-
-// End of File ///////////////////////////////////////////////////////////////

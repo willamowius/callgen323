@@ -32,6 +32,7 @@
 		<Unit filename="main.h">
 			<Option target="&lt;{~None~}&gt;" />
 		</Unit>
+		<Unit filename="version.h" />
 		<Extensions>
 			<code_completion />
 			<envvars />
