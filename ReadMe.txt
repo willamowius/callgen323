@@ -1,4 +1,11 @@
 H.323 Call Generator
+
+v 2.1.0, Nov 2017
+=================
+
+Update to support H.460.x and many bug fixes.
+
+
 v 0.1.3, 26 Jan 2000
 ====================
 
@@ -14,7 +21,7 @@ What you can do with this call generator:
 
 HOW TO GET
 ==========
-http://www.theseventhson.freeserve.co.uk/callgen323.html
+https://github.com/willamowius/callgen323
 
 
 HOW TO COMPILE
@@ -31,11 +38,11 @@ HOW TO COMPILE
   - Follow the instructions on how to build openh323/voxilla.
   - Unpack the callgen distribution under the openh323 directory. 
     Example: 
-      $ cd ~/openh323
+      $ cd ~/h323plus
       $ tar -xzf callgen323.tar.gz
   - Run make in the callgen323 directory:
      $ cd callgen323
-     $ make
+     $ make optnoshared
   - Run the executable to get the runtime options.
   - You're on your own now.
 
@@ -130,6 +137,10 @@ other username, and specify username and host of the callee callgen:
 
 CHANGELOG
 =========
+[Nov 2017] Version 2.1.0
+- support H.460.x
+- bug fixes
+
 [26 Jan 2000] Version 0.1.3
 - Compatibility with openh323 v1 alpha2
 - Fix gatekeeper functionality.
