@@ -791,7 +791,8 @@ PBoolean MyH323Connection::OpenAudioChannel(PBoolean isEncoding,
 PBoolean MyH323Connection::OpenVideoChannel(PBoolean isEncoding,
 										H323VideoCodec & codec)
 {
-  PString deviceName = isEncoding ? "Fake/BouncingBoxes" : "NULL";
+  // option for demo pattern include: Fake/MovingLine, Fake/BouncingBoxes, Text
+  PString deviceName = isEncoding ? "Fake/MovingBlocks" : "NULL";
 
   PVideoDevice * device = isEncoding ? (PVideoDevice *)PVideoInputDevice::CreateDeviceByName(deviceName)
                                      : (PVideoDevice *)PVideoOutputDevice::CreateDeviceByName(deviceName);
@@ -809,6 +810,8 @@ PBoolean MyH323Connection::OpenVideoChannel(PBoolean isEncoding,
         cap.SetColourFormat("YUV420P");
         cap.SetFrameRate(30);
         // sizes must be from largest to smallest
+        cap.SetFrameSize(1920, 1080);
+        caps.framesizes.push_back(cap);
         cap.SetFrameSize(1280, 720);
         caps.framesizes.push_back(cap);
         cap.SetFrameSize(704, 576);
@@ -825,6 +828,8 @@ PBoolean MyH323Connection::OpenVideoChannel(PBoolean isEncoding,
     cap.SetColourFormat("YUV420P");
     cap.SetFrameRate(30);
     // sizes must be from largest to smallest
+    cap.SetFrameSize(1920, 1080);
+    caps.framesizes.push_back(cap);
     cap.SetFrameSize(1280, 720);
     caps.framesizes.push_back(cap);
     cap.SetFrameSize(704, 576);
@@ -837,6 +842,10 @@ PBoolean MyH323Connection::OpenVideoChannel(PBoolean isEncoding,
   }
 #endif
 
+  unsigned frameWidth = codec.GetWidth();
+  unsigned frameHeight = codec.GetHeight();
+  PTRACE(1, "Codec says:" << (isEncoding ? " OUT " : " IN ") << frameWidth << "x" << frameHeight);
+
   if (!device ||
 	  !device->SetFrameSize(codec.GetWidth(), codec.GetHeight()) ||
       !device->SetColourFormatConverter("YUV420P") ||
@@ -844,6 +853,9 @@ PBoolean MyH323Connection::OpenVideoChannel(PBoolean isEncoding,
     PTRACE(1, "Failed to open or configure the video device \"" << deviceName << '"');
     return FALSE;
   }
+
+  device->GetFrameSize(frameWidth, frameHeight);
+  PTRACE(1, "Device says:" << (isEncoding ? " OUT " : " IN ") << frameWidth << "x" << frameHeight);
 
   PVideoChannel * channel = new PVideoChannel;
 
