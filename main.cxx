@@ -341,6 +341,10 @@ void CallGen::Main()
   if (args.HasOption('T'))
     h323->DisableH245Tunneling(TRUE);
 
+  h323->SetPerCallBandwidth(2048); // TODO: make switch
+  // options for demo pattern include: Fake/MovingLine, Fake/BouncingBoxes, Text
+  h323->SetVideoPattern("Fake/MovingBlocks");
+
   if (!args.HasOption('v'))
     h323->RemoveCapability(H323Capability::e_Video);
 
@@ -692,6 +696,8 @@ MyH323EndPoint::MyH323EndPoint()
   // Set capability
   AddAllCapabilities(0, 0, "*");
   AddAllUserInputCapabilities(0, P_MAX_INDEX);
+  SetPerCallBandwidth(384);
+  SetVideoPattern("Fake/MovingBlocks");
 }
 
 H323Connection * MyH323EndPoint::CreateConnection(unsigned callReference)
@@ -751,8 +757,23 @@ PBoolean MyH323EndPoint::OnStartLogicalChannel(H323Connection & connection,
 
 MyH323Connection::MyH323Connection(MyH323EndPoint & ep,
                                    unsigned callRef)
-  : H323Connection(ep, callRef),endpoint(ep)
+  : H323Connection(ep, callRef), endpoint(ep)
 {
+}
+
+
+PBoolean MyH323Connection::OnSendSignalSetup(H323SignalPDU & setupPDU)
+{
+    // set outgoing bearer capability to unrestricted information transfer + transfer rate
+	PBYTEArray caps;
+	caps.SetSize(4);
+	caps[0] = 0x88;
+	caps[1] = 0x18;
+	caps[2] = 0x80 | endpoint.GetRateMultiplier();
+	caps[3] = 0xa5;
+	setupPDU.GetQ931().SetIE(Q931::BearerCapabilityIE, caps);
+
+    return H323Connection::OnSendSignalSetup(setupPDU);
 }
 
 
@@ -791,8 +812,7 @@ PBoolean MyH323Connection::OpenAudioChannel(PBoolean isEncoding,
 PBoolean MyH323Connection::OpenVideoChannel(PBoolean isEncoding,
 										H323VideoCodec & codec)
 {
-  // option for demo pattern include: Fake/MovingLine, Fake/BouncingBoxes, Text
-  PString deviceName = isEncoding ? "Fake/MovingBlocks" : "NULL";
+  PString deviceName = isEncoding ? endpoint.GetVideoPattern() : "NULL";
 
   PVideoDevice * device = isEncoding ? (PVideoDevice *)PVideoInputDevice::CreateDeviceByName(deviceName)
                                      : (PVideoDevice *)PVideoOutputDevice::CreateDeviceByName(deviceName);

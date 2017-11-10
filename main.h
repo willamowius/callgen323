@@ -43,6 +43,7 @@
 #include <ptclib/pwavfile.h>
 
 #include <h323.h>
+#include <h323pdu.h>
 
 #if !defined(P_USE_STANDARD_CXX_BOOL) && !defined(P_USE_INTEGER_BOOL)
     typedef int PBoolean;
@@ -106,6 +107,8 @@ class MyH323Connection : public H323Connection
   public:
     MyH323Connection(MyH323EndPoint & ep,unsigned callRef);
 
+    virtual PBoolean OnSendSignalSetup(H323SignalPDU & setupPDU);
+
     virtual PBoolean OpenAudioChannel(
       PBoolean isEncoding,          /// Direction of data flow
       unsigned bufferSize,          /// Size of each sound buffer
@@ -152,6 +155,15 @@ class MyH323EndPoint : public H323EndPoint
       H323Connection & connection,
       H323Channel & PTRACE_channel
     );
+    void SetPerCallBandwidth(unsigned bw) { m_rateMultiplier = ceil((float)bw / 64); }
+    BYTE GetRateMultiplier() const { return m_rateMultiplier; }
+
+    void SetVideoPattern(const PString & pattern) { m_videoPattern = pattern; }
+    PString GetVideoPattern() const { return m_videoPattern; }
+
+  protected:
+    BYTE m_rateMultiplier;
+    PString m_videoPattern;
 };
 
 ///////////////////////////////////////////////////////////////////////////////
