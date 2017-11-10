@@ -3,8 +3,6 @@ H.323 Call Generator
 v 2.1.0, Nov 2017
 =================
 
-Don't expect it to do fancy things like playing/recording sounds/DTMF yet. 
-
 What you can do with this call generator: 
  - spawning an exact number of calls. 
  - receiving an exact number of calls. 
