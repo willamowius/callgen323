@@ -13,6 +13,9 @@ endif
 
 include $(OPENH323DIR)/openh323u.mak
 
+# add cleanup files
+CLEAN_FILES += PWL*
+
 STDCCFLAGS += -Wno-unused-variable
 
 # dependencies
