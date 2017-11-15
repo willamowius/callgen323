@@ -155,6 +155,7 @@ class MyH323EndPoint : public H323EndPoint
       H323Connection & connection,
       H323Channel & PTRACE_channel
     );
+    // TODO: include in codec negotiations, only sets bearer capabilities right now
     void SetPerCallBandwidth(unsigned bw) { m_rateMultiplier = ceil((float)bw / 64); }
     BYTE GetRateMultiplier() const { return m_rateMultiplier; }
 

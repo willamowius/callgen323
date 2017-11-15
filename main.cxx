@@ -98,6 +98,7 @@ void CallGen::Main()
 
   PArgList & args = GetArguments();
   args.Parse("a-access-token-oid:"
+             "b-bandwidth:"
              "c-cdr:"
              "C-cycle."
              "D-disable:"
@@ -128,7 +129,10 @@ void CallGen::Main()
              "-require-gatekeeper."
              "T-h245tunneldisable."
              "t-trace."
+#ifdef H323_VIDEO
 			 "v-video."
+			 "-videopattern:"
+#endif
 			 "-maxframe."
              "-tmaxest:"
              "-tmincall:"
@@ -175,8 +179,12 @@ void CallGen::Main()
             "  -p --password pwd    Specify gatekeeper H.235 password [none]\n"
             "  -P --prefer codec    Set codec preference (use multiple times) [none]\n"
             "  -D --disable codec   Disable codec (use multiple times) [none]\n"
-            "  -v --video enable    Enable Video Support\n"
+            "  -b -- bandwidth kbps Specify bandwidth per call\n"
+#ifdef H323_VIDEO
+            "  -v --video           Enable Video Support\n"
+            "     --videopattern    Set video pattern to send, eg. 'Fake/BouncingBoxes' or 'Fake/MovingBlocks'\n"
             "  --maxframe           Maximum Frame Size\n"
+#endif
             "  -f --fast-disable    Disable fast start\n"
             "  -T --h245tunneldisable  Disable H245 tunnelling\n"
             "  -O --out-msg file    Specify PCM16 WAV file for outgoing message [ogm.wav]\n"
@@ -341,14 +349,25 @@ void CallGen::Main()
   if (args.HasOption('T'))
     h323->DisableH245Tunneling(TRUE);
 
-  h323->SetPerCallBandwidth(2048); // TODO: make switch
-  // options for demo pattern include: Fake/MovingLine, Fake/BouncingBoxes, Text
-  h323->SetVideoPattern("Fake/MovingBlocks");
-
-  if (!args.HasOption('v'))
-    h323->RemoveCapability(H323Capability::e_Video);
+  unsigned bandwidth = 768; // default to 768 kbps
+  if (args.HasOption('b')) {
+    bandwidth = args.GetOptionString('b').AsUnsigned();
+  }
+  cout << "Per call bandwidth: " << bandwidth << " kbps" << endl;
+  h323->SetPerCallBandwidth(bandwidth);
 
 #ifdef H323_VIDEO
+  if (!args.HasOption('v')) {
+    cout << "Video is disabled" << endl;
+    h323->RemoveCapability(H323Capability::e_Video);
+  }
+  PString videoPattern = "Fake/MovingBlocks";
+  if (args.HasOption("videopattern")) {
+    // options for demo pattern include: Fake/MovingLine, Fake/BouncingBoxes, Text
+    videoPattern = args.GetOptionString("videopattern");
+  }
+  h323->SetVideoPattern(videoPattern);
+
   if (args.HasOption("maxframe")) {
     PCaselessString maxframe = args.GetOptionString("maxframe");
 	if (maxframe == "qcif")
