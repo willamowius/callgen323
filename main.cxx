@@ -59,7 +59,7 @@
  * First commit to h323plus
  *
  *
- *
+ * 2008 - 2017 Fixing and feature extensions [Jan Willamowius]
  * 25 Jan 2002 Substantial improvement [Equivalence Pty. Ltd.]
  * 25 Jan 2000 Update to incorporate openh323 v.01 alpha2 and fix gatekeeper
  *             related codes [bennylp]
@@ -77,7 +77,6 @@
 
 PCREATE_PROCESS(CallGen);
 
-
 ///////////////////////////////////////////////////////////////////////////////
 
 CallGen::CallGen()
@@ -88,7 +87,6 @@ CallGen::CallGen()
   totalEstablished = 0;
   h323 = NULL;
 }
-
 
 void CallGen::Main()
 {
@@ -309,39 +307,39 @@ void CallGen::Main()
   } else
 #endif
   {
-  if (args.HasOption('g')) {
+    if (args.HasOption('g')) {
 #ifdef H323_H46018
-    cout << "H.460.18/.19: " << (args.HasOption("h46018enable") ? "enabled" : "disabled") << endl;
-    h323->H46018Enable(args.HasOption("h46018enable"));
+      cout << "H.460.18/.19: " << (args.HasOption("h46018enable") ? "enabled" : "disabled") << endl;
+      h323->H46018Enable(args.HasOption("h46018enable"));
 #endif
 #ifdef H323_H46019M
-    cout << "H.460.19 RTP multiplexing: " << (args.HasOption("h46019multiplexenable") ? "enabled" : "disabled") << endl;
-    h323->H46019MEnable(args.HasOption("h46019multiplexenable"));
-    h323->H46019MSending(args.HasOption("h46019multiplexenable"));
+      cout << "H.460.19 RTP multiplexing: " << (args.HasOption("h46019multiplexenable") ? "enabled" : "disabled") << endl;
+      h323->H46019MEnable(args.HasOption("h46019multiplexenable"));
+      h323->H46019MSending(args.HasOption("h46019multiplexenable"));
 #endif
 #ifdef H323_H46023
-    cout << "H.460.23/.24: " << (args.HasOption("h46023enable") ? "enabled" : "disabled") << endl;
-    h323->H46023Enable(args.HasOption("h46023enable"));
+      cout << "H.460.23/.24: " << (args.HasOption("h46023enable") ? "enabled" : "disabled") << endl;
+      h323->H46023Enable(args.HasOption("h46023enable"));
 #endif
-    PString gkAddr = args.GetOptionString('g');
-    cout << "Registering with gatekeeper \"" << gkAddr << "\" ..." << flush;
-    if (h323->UseGatekeeper(gkAddr))
-      cout << "\nGatekeeper set to \"" << *h323->GetGatekeeper() << '"' << endl;
-    else {
-      cout << "\nError registering with gatekeeper at \"" << gkAddr << '"' << endl;
-      return;
-    }
-  }
-  else if (!args.HasOption('n')) {
-    cout << "Searching for gatekeeper ..." << flush;
-    if (h323->UseGatekeeper())
-      cout << "\nGatekeeper found: " << *h323->GetGatekeeper() << endl;
-    else {
-      cout << "\nNo gatekeeper found." << endl;
-      if (args.HasOption("require-gatekeeper"))
+      PString gkAddr = args.GetOptionString('g');
+      cout << "Registering with gatekeeper \"" << gkAddr << "\" ..." << flush;
+      if (h323->UseGatekeeper(gkAddr))
+        cout << "\nGatekeeper set to \"" << *h323->GetGatekeeper() << '"' << endl;
+      else {
+        cout << "\nError registering with gatekeeper at \"" << gkAddr << '"' << endl;
         return;
+      }
     }
-  }
+    else if (!args.HasOption('n')) {
+      cout << "Searching for gatekeeper ..." << flush;
+      if (h323->UseGatekeeper())
+        cout << "\nGatekeeper found: " << *h323->GetGatekeeper() << endl;
+      else {
+        cout << "\nNo gatekeeper found." << endl;
+        if (args.HasOption("require-gatekeeper"))
+          return;
+      }
+    }
   }
 
   if (args.HasOption('f'))
@@ -462,7 +460,6 @@ void CallGen::Main()
   delete h323;
 }
 
-
 void CallGen::Cancel(PThread &, INT)
 {
   PTRACE(3, "CallGen\tCancel thread started.");
@@ -495,12 +492,9 @@ void CallGen::Cancel(PThread &, INT)
   PTRACE(1, "CallGen\tCancelled calls.");
 }
 
-
 ///////////////////////////////////////////////////////////////////////////////
 
-CallThread::CallThread(unsigned _index,
-                       const PStringArray & _destinations,
-                       const CallParams & _params)
+CallThread::CallThread(unsigned _index, const PStringArray & _destinations, const CallParams & _params)
   : PThread(1000, NoAutoDeleteThread, NormalPriority, psprintf("CallGen %u", _index)),
     destinations(_destinations),
     index(_index),
@@ -509,16 +503,12 @@ CallThread::CallThread(unsigned _index,
   Resume();
 }
 
-
-static unsigned RandomRange(PRandom & rand,
-                            const PTimeInterval & tmin,
-                            const PTimeInterval & tmax)
+static unsigned RandomRange(PRandom & rand, const PTimeInterval & tmin, const PTimeInterval & tmax)
 {
   unsigned umax = tmax.GetInterval();
   unsigned umin = tmin.GetInterval();
   return rand.Generate() % (umax - umin + 1) + umin;
 }
-
 
 #define START_OUTPUT(index, token) \
 { \
@@ -531,7 +521,6 @@ static unsigned RandomRange(PRandom & rand,
 }
 
 #define OUTPUT(index, token, info) START_OUTPUT(index, token) << info; END_OUTPUT()
-
 
 void CallThread::Main()
 {
@@ -619,7 +608,6 @@ void CallThread::Main()
   callgen.threadEnded.Signal();
 }
 
-
 void CallThread::Stop()
 {
   if (!IsTerminated())
@@ -627,7 +615,6 @@ void CallThread::Stop()
 
   exit.Signal();
 }
-
 
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -692,7 +679,6 @@ void CallDetail::Drop(H323Connection & connection)
   cdrMutex.Signal();
 }
 
-
 void CallDetail::OnRTPStatistics(const RTP_Session & session, const PString & token)
 {
   if (receivedMedia.GetTimeInSeconds() == 0 && session.GetPacketsReceived() > 0) {
@@ -724,7 +710,6 @@ H323Connection * MyH323EndPoint::CreateConnection(unsigned callReference)
   return new MyH323Connection(*this, callReference);
 }
 
-
 static PString TidyRemotePartyName(const H323Connection & connection)
 {
   PString name = connection.GetRemotePartyName();
@@ -736,9 +721,7 @@ static PString TidyRemotePartyName(const H323Connection & connection)
   return name.Left(bracket).Trim();
 }
 
-
-void MyH323EndPoint::OnConnectionEstablished(H323Connection & connection,
-                                             const PString & token)
+void MyH323EndPoint::OnConnectionEstablished(H323Connection & connection, const PString & token)
 {
   OUTPUT("", token, "Established \"" << TidyRemotePartyName(connection) << "\""
                     " " << connection.GetControlChannel().GetRemoteAddress() <<
@@ -746,9 +729,7 @@ void MyH323EndPoint::OnConnectionEstablished(H323Connection & connection,
                     " total=" << ++CallGen::Current().totalEstablished);
 }
 
-
-void MyH323EndPoint::OnConnectionCleared(H323Connection & connection,
-                                         const PString & token)
+void MyH323EndPoint::OnConnectionCleared(H323Connection & connection, const PString & token)
 {
   OUTPUT("", token, "Cleared \"" << TidyRemotePartyName(connection) << "\""
                     " " << connection.GetControlChannel().GetRemoteAddress() <<
@@ -756,9 +737,7 @@ void MyH323EndPoint::OnConnectionCleared(H323Connection & connection,
   ((MyH323Connection&)connection).details.Drop(connection);
 }
 
-
-PBoolean MyH323EndPoint::OnStartLogicalChannel(H323Connection & connection,
-                                           H323Channel & channel)
+PBoolean MyH323EndPoint::OnStartLogicalChannel(H323Connection & connection, H323Channel & channel)
 {
   (channel.GetDirection() == H323Channel::IsTransmitter
         ? ((MyH323Connection&)connection).details.openedTransmitMedia
@@ -771,15 +750,12 @@ PBoolean MyH323EndPoint::OnStartLogicalChannel(H323Connection & connection,
   return H323EndPoint::OnStartLogicalChannel(connection, channel);
 }
 
-
 ///////////////////////////////////////////////////////////////////////////////
 
-MyH323Connection::MyH323Connection(MyH323EndPoint & ep,
-                                   unsigned callRef)
+MyH323Connection::MyH323Connection(MyH323EndPoint & ep, unsigned callRef)
   : H323Connection(ep, callRef), endpoint(ep)
 {
 }
-
 
 PBoolean MyH323Connection::OnSendSignalSetup(H323SignalPDU & setupPDU)
 {
@@ -795,16 +771,12 @@ PBoolean MyH323Connection::OnSendSignalSetup(H323SignalPDU & setupPDU)
     return H323Connection::OnSendSignalSetup(setupPDU);
 }
 
-
 void MyH323Connection::OnRTPStatistics(const RTP_Session & session) const
 {
   ((MyH323Connection *)this)->details.OnRTPStatistics(session, GetCallToken());
 }
 
-
-PBoolean MyH323Connection::OpenAudioChannel(PBoolean isEncoding,
-                                        unsigned bufferSize,
-                                        H323AudioCodec & codec)
+PBoolean MyH323Connection::OpenAudioChannel(PBoolean isEncoding, unsigned bufferSize, H323AudioCodec & codec)
 {
 
   unsigned frameDelay = bufferSize/16; // Assume 16 bit PCM
@@ -828,8 +800,7 @@ PBoolean MyH323Connection::OpenAudioChannel(PBoolean isEncoding,
 }
 
 #ifdef H323_VIDEO
-PBoolean MyH323Connection::OpenVideoChannel(PBoolean isEncoding,
-										H323VideoCodec & codec)
+PBoolean MyH323Connection::OpenVideoChannel(PBoolean isEncoding, H323VideoCodec & codec)
 {
   PString deviceName = isEncoding ? endpoint.GetVideoPattern() : "NULL";
 
@@ -909,9 +880,7 @@ PBoolean MyH323Connection::OpenVideoChannel(PBoolean isEncoding,
 
 ///////////////////////////////////////////////////////////////////////////////
 
-PlayMessage::PlayMessage(const PString & filename,
-                         unsigned frameDelay,
-                         unsigned frameSize)
+PlayMessage::PlayMessage(const PString & filename, unsigned frameDelay, unsigned frameSize)
   : PDelayChannel(PDelayChannel::DelayReadsOnly, frameDelay, frameSize)
 {
   if (filename.IsEmpty())
@@ -926,7 +895,6 @@ PlayMessage::PlayMessage(const PString & filename,
     }
   }
 }
-
 
 PBoolean PlayMessage::Read(void * buf, PINDEX len)
 {
@@ -954,12 +922,9 @@ PBoolean PlayMessage::Close()
   return PDelayChannel::Close();
 }
 
-
 ///////////////////////////////////////////////////////////////////////////////
 
-RecordMessage::RecordMessage(const PString & wavFileName,
-                             unsigned frameDelay,
-                             unsigned frameSize)
+RecordMessage::RecordMessage(const PString & wavFileName, unsigned frameDelay, unsigned frameSize)
   : PDelayChannel(PDelayChannel::DelayWritesOnly, frameDelay, frameSize)
 {
   reallyClose = FALSE;
@@ -976,7 +941,6 @@ RecordMessage::RecordMessage(const PString & wavFileName,
     delete wavFile;
 }
 
-
 PBoolean RecordMessage::Write(const void * buf, PINDEX len)
 {
   if (PDelayChannel::Write(buf, len))
@@ -986,12 +950,9 @@ PBoolean RecordMessage::Write(const void * buf, PINDEX len)
   return !reallyClose;
 }
 
-
 PBoolean RecordMessage::Close()
 {
   reallyClose = TRUE;
   return PDelayChannel::Close();
 }
 
-
-// End of file ////////////////////////////////////////////////////////////////
