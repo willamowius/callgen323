@@ -681,9 +681,16 @@ void CallDetail::Drop(H323Connection & connection)
 
 void CallDetail::OnRTPStatistics(const RTP_Session & session, const PString & token)
 {
+  if (session.GetSessionID() == 1 && !receivedAudio) {
+    receivedAudio = true;
+    OUTPUT("", token, "Received audio");
+  }
+  if (session.GetSessionID() == 2 && !receivedVideo) {
+    receivedVideo = true;
+    OUTPUT("", token, "Received video");
+  }
   if (receivedMedia.GetTimeInSeconds() == 0 && session.GetPacketsReceived() > 0) {
     receivedMedia = PTime();
-    OUTPUT("", token, "Received media");
 
     const RTP_UDP * udpSess = dynamic_cast<const RTP_UDP *>(&session);
     if (udpSess != NULL)

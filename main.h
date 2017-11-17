@@ -83,12 +83,16 @@ struct CallDetail
   CallDetail()
     : openedTransmitMedia(0),
       openedReceiveMedia(0),
-      receivedMedia(0)
+      receivedMedia(0),
+      receivedAudio(false),
+      receivedVideo(false)
     { }
 
   PTime                openedTransmitMedia;
   PTime                openedReceiveMedia;
   PTime                receivedMedia;
+  bool                 receivedAudio;
+  bool                 receivedVideo;
   H323TransportAddress mediaGateway;
 
   void Drop(H323Connection & connection);
