@@ -762,6 +762,7 @@ PBoolean MyH323EndPoint::OnStartLogicalChannel(H323Connection & connection, H323
 MyH323Connection::MyH323Connection(MyH323EndPoint & ep, unsigned callRef)
   : H323Connection(ep, callRef), endpoint(ep)
 {
+    detectInBandDTMF = FALSE; // turn off in-band DTMF detection (uses a huge amount of CPU)
 }
 
 PBoolean MyH323Connection::OnSendSignalSetup(H323SignalPDU & setupPDU)

@@ -115,19 +115,15 @@ class MyH323Connection : public H323Connection
 
     virtual PBoolean OpenAudioChannel(
       PBoolean isEncoding,          /// Direction of data flow
-      unsigned bufferSize,          /// Size of each sound buffer
+      unsigned bufferSize,          /// Size of each audio buffer
       H323AudioCodec & codec        /// codec that is doing the opening
     );
 
 #ifdef H323_VIDEO
-    virtual PBoolean OpenVideoChannel(PBoolean isEncoding,
-								  H323VideoCodec & codec
-	);
+    virtual PBoolean OpenVideoChannel(PBoolean isEncoding, H323VideoCodec & codec);
 #endif
 
-    virtual void OnRTPStatistics(
-      const RTP_Session & session   /// Session with statistics
-    ) const;
+    virtual void OnRTPStatistics(const RTP_Session & session) const;
 
     CallDetail details;
 
