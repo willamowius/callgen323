@@ -867,6 +867,7 @@ PBoolean MyH323Connection::OpenVideoChannel(PBoolean isEncoding, H323VideoCodec 
   if (!device ||
 	  !device->SetFrameSize(codec.GetWidth(), codec.GetHeight()) ||
       !device->SetColourFormatConverter("YUV420P") ||
+      !device->SetFrameRate(30) ||
       !device->Open(deviceName, TRUE)) {
     PTRACE(1, "Failed to open or configure the video device \"" << deviceName << '"');
     return FALSE;
