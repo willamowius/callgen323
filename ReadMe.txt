@@ -46,11 +46,11 @@ the same number of calls that you want to receive/make with -n option.
 
 Example:
 in host 1, run:
-  callgen -n 5 -N -l
+  callgen -m 5 -n -l
 meaning: start in passive mode with 5 number of lines/calls to receive.
 
 in host 2, run:
-  callgen -n 5 host1
+  callgen -m 5 host1
 meaning: make 5 calls to host1
 
 You can run both instances in a single host if you want, as long as
@@ -59,23 +59,10 @@ specify different IP interface to listen for each callgen (with
 the -i option).
 
 
-RUNTIME OPTIONS
-===============
--1 <second>
-   Maximum timeout value for making calls. This specifies maximum
-   time until which the call attempt will be stopped. For caller 
-   callgen only, and the default value is 60 seconds.
--2 <second>
-   After the calls are connected (or timeout), wait for this time 
-   before starting to hangup all lines. Only meaningful for caller 
-   callgen, and the default value is 2 seconds.
--3 <second>
-   After hanging up sequence has been started, wait until all calls
-   are disconnected or this timeout has elapsed. When the timeout
-   has elapsed, the callgen will continue to the next phase. Only
-   meaningful for caller, and the default value is 60 seconds.
--4 <second>
-   Wait for this time before starting next sequence/batch.
+COMMAND LINE OPTIONS (SELECTED)
+===============================
+-h
+   Show usage with all command line options
 -g <host>
    Manually specifies the host/address of the gatekeeper.
 -i <IP addr>
@@ -84,12 +71,12 @@ RUNTIME OPTIONS
 -l
    Start in passive mode. Set this option for the receiving/callee
    callgen.
--n <number>
+-m <number>
    Number of calls/lines. For receiving callgen, this specifies the
    maximum number of calls it can receive simultaneously. For the
    calling callgen, this specifies the number of calls that the
    callgen must make simultaneously.
--N
+-n
    Doesn't require to register with gatekeeper. Means that if the
    gatekeeper registration fails, the callgen will still continue
    its execution.
@@ -152,3 +139,4 @@ CHANGELOG
 
 Benny LP
 seventhson@theseventhson.freeserve.co.uk
+
