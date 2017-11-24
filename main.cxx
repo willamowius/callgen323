@@ -130,8 +130,9 @@ void CallGen::Main()
 #ifdef H323_VIDEO
 			 "v-video."
 			 "-videopattern:"
-#endif
+			 "R-framerate:"
 			 "-maxframe."
+#endif
              "-tmaxest:"
              "-tmincall:"
              "-tmaxcall:"
@@ -181,6 +182,7 @@ void CallGen::Main()
 #ifdef H323_VIDEO
             "  -v --video           Enable Video Support\n"
             "     --videopattern    Set video pattern to send, eg. 'Fake/BouncingBoxes' or 'Fake/MovingBlocks'\n"
+            "  -R --framerate n     Set frame rate for outgoing video (fps)\n"
             "  --maxframe           Maximum Frame Size\n"
 #endif
             "  -f --fast-disable    Disable fast start\n"
@@ -365,6 +367,10 @@ void CallGen::Main()
     videoPattern = args.GetOptionString("videopattern");
   }
   h323->SetVideoPattern(videoPattern);
+
+  if (args.HasOption('R')) {
+    h323->SetFrameRate(args.GetOptionString('R').AsUnsigned());
+  }
 
   if (args.HasOption("maxframe")) {
     PCaselessString maxframe = args.GetOptionString("maxframe");
@@ -710,6 +716,7 @@ MyH323EndPoint::MyH323EndPoint()
   AddAllUserInputCapabilities(0, P_MAX_INDEX);
   SetPerCallBandwidth(384);
   SetVideoPattern("Fake/MovingBlocks");
+  SetFrameRate(30);
 }
 
 H323Connection * MyH323EndPoint::CreateConnection(unsigned callReference)
@@ -826,7 +833,7 @@ PBoolean MyH323Connection::OpenVideoChannel(PBoolean isEncoding, H323VideoCodec 
         PVideoInputDevice::Capabilities caps;
         PVideoFrameInfo cap;
         cap.SetColourFormat("YUV420P");
-        cap.SetFrameRate(30);
+        cap.SetFrameRate(endpoint.GetFrameRate());
         // sizes must be from largest to smallest
         cap.SetFrameSize(1920, 1080);
         caps.framesizes.push_back(cap);
@@ -844,7 +851,7 @@ PBoolean MyH323Connection::OpenVideoChannel(PBoolean isEncoding, H323VideoCodec 
     PVideoInputDevice::Capabilities caps;
     PVideoFrameInfo cap;
     cap.SetColourFormat("YUV420P");
-    cap.SetFrameRate(30);
+    cap.SetFrameRate(endpoint.GetFrameRate());
     // sizes must be from largest to smallest
     cap.SetFrameSize(1920, 1080);
     caps.framesizes.push_back(cap);
@@ -867,7 +874,7 @@ PBoolean MyH323Connection::OpenVideoChannel(PBoolean isEncoding, H323VideoCodec 
   if (!device ||
 	  !device->SetFrameSize(codec.GetWidth(), codec.GetHeight()) ||
       !device->SetColourFormatConverter("YUV420P") ||
-      !device->SetFrameRate(30) ||
+      !device->SetFrameRate(endpoint.GetFrameRate()) ||
       !device->Open(deviceName, TRUE)) {
     PTRACE(1, "Failed to open or configure the video device \"" << deviceName << '"');
     return FALSE;

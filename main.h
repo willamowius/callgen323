@@ -162,9 +162,13 @@ class MyH323EndPoint : public H323EndPoint
     void SetVideoPattern(const PString & pattern) { m_videoPattern = pattern; }
     PString GetVideoPattern() const { return m_videoPattern; }
 
+    void SetFrameRate(unsigned fps) { m_frameRate = fps; }
+    unsigned GetFrameRate() const { return m_frameRate; }
+
   protected:
     BYTE m_rateMultiplier;
     PString m_videoPattern;
+    unsigned m_frameRate;
 };
 
 ///////////////////////////////////////////////////////////////////////////////
