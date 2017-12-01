@@ -431,7 +431,7 @@ void CallGen::Main()
       if (args.HasOption('C'))
         threadList.Append(new CallThread(idx+1, args.GetParameters(), params));
       else {
-        PINDEX arg = idx%args.GetCount();
+        PINDEX arg = idx % args.GetCount();
         threadList.Append(new CallThread(idx+1, args.GetParameters(arg, arg), params));
       }
     }
@@ -547,7 +547,7 @@ void CallThread::Main()
   // Loop "repeat" times for (repeat > 0), or loop forever for (repeat == 0)
   unsigned count = 1;
   do {
-    PString destination = destinations[(index-1 + count-1)%destinations.GetSize()];
+    PString destination = destinations[(index-1 + count-1) % destinations.GetSize()];
 
     // trigger a call
     PString token;
