@@ -58,6 +58,9 @@ you have two IP interfaces on your host. All you need to do is to
 specify different IP interface to listen for each callgen (with
 the -i option).
 
+Audio files for OGM messages must be 16bit Microsoft PCM files
+in WAV format at 8000 Hz.
+
 
 COMMAND LINE OPTIONS (SELECTED)
 ===============================
