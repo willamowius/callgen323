@@ -1,7 +1,7 @@
 /*
  * main.h
  *
- * OpenH323 call generator
+ * H.323 call generator
  *
  * Copyright (c) 2001 Benny L. Prijono <seventhson@theseventhson.freeserve.co.uk>
  *
