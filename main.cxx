@@ -717,6 +717,7 @@ MyH323EndPoint::MyH323EndPoint()
   SetPerCallBandwidth(384);
   SetVideoPattern("Fake/MovingBlocks");
   SetFrameRate(30);
+  useJitterBuffer = false; // save a little processing time
 }
 
 H323Connection * MyH323EndPoint::CreateConnection(unsigned callReference)
