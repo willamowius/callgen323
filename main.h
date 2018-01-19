@@ -109,7 +109,8 @@ class MyH323Connection : public H323Connection
 {
     PCLASSINFO(MyH323Connection, H323Connection);
   public:
-    MyH323Connection(MyH323EndPoint & ep,unsigned callRef);
+    MyH323Connection(MyH323EndPoint & ep, unsigned callRef);
+    virtual ~MyH323Connection();
 
     virtual PBoolean OnSendSignalSetup(H323SignalPDU & setupPDU);
 
@@ -129,6 +130,8 @@ class MyH323Connection : public H323Connection
 
   protected:
     MyH323EndPoint & endpoint;
+    PVideoChannel * videoChannelIn;
+    PVideoChannel * videoChannelOut;
 };
 
 

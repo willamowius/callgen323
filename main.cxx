@@ -768,9 +768,15 @@ PBoolean MyH323EndPoint::OnStartLogicalChannel(H323Connection & connection, H323
 ///////////////////////////////////////////////////////////////////////////////
 
 MyH323Connection::MyH323Connection(MyH323EndPoint & ep, unsigned callRef)
-  : H323Connection(ep, callRef), endpoint(ep)
+  : H323Connection(ep, callRef), endpoint(ep), videoChannelIn(NULL), videoChannelOut(NULL)
 {
     detectInBandDTMF = FALSE; // turn off in-band DTMF detection (uses a huge amount of CPU)
+}
+
+MyH323Connection::~MyH323Connection()
+{
+    delete videoChannelIn;
+    delete videoChannelOut;
 }
 
 PBoolean MyH323Connection::OnSendSignalSetup(H323SignalPDU & setupPDU)
@@ -884,14 +890,15 @@ PBoolean MyH323Connection::OpenVideoChannel(PBoolean isEncoding, H323VideoCodec 
   device->GetFrameSize(frameWidth, frameHeight);
   PTRACE(1, "Device says:" << (isEncoding ? " OUT " : " IN ") << frameWidth << "x" << frameHeight);
 
-  PVideoChannel * channel = new PVideoChannel;
-
-  if (isEncoding)
-    channel->AttachVideoReader((PVideoInputDevice *)device);
-  else
-    channel->AttachVideoPlayer((PVideoOutputDevice *)device);
-
-  return codec.AttachChannel(channel,TRUE);
+  if (isEncoding) {
+    videoChannelOut = new PVideoChannel();
+    videoChannelOut->AttachVideoReader((PVideoInputDevice *)device);
+    return codec.AttachChannel(videoChannelOut, false);
+  } else {
+    videoChannelIn = new PVideoChannel();
+    videoChannelIn->AttachVideoPlayer((PVideoOutputDevice *)device);
+    return codec.AttachChannel(videoChannelIn, false);
+  }
 };
 #endif
 
