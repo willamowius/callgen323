@@ -266,7 +266,7 @@
 				RelativePath="main.h">
 			</File>
 			<File
-				RelativePath="precompile.h">
+				RelativePath="version.h">
 			</File>
 		</Filter>
 		<Filter
