@@ -4,6 +4,7 @@
  * H.323 call generator
  *
  * Copyright (c) 2001 Benny L. Prijono <seventhson@theseventhson.freeserve.co.uk>
+ * Copyright (c) 2017-2018 Jan Willamowius <jan@willamowius.de>
  *
  * The contents of this file are subject to the Mozilla Public License
  * Version 1.0 (the "License"); you may not use this file except in
@@ -102,6 +103,10 @@ void CallGen::Main()
              "D-disable:"
              "f-fast-disable."
              "g-gatekeeper:"
+#ifdef H323_H235
+             "-mediaenc:"
+             "-maxtoken:"
+#endif
 #ifdef H323_H46017
              "k-h46017:"
 #endif
@@ -160,6 +165,10 @@ void CallGen::Main()
             "  -o --output file     Specify filename for trace output [stdout]\n"
             "  -i --interface addr  Specify IP address and port listen on [*:1720]\n"
             "  -g --gatekeeper host Specify gatekeeper host [auto-discover]\n"
+#ifdef H323_H235
+            "     --mediaenc        Enable Media encryption (value max cipher 128, 192 or 256)\n"
+            "     --maxtoken        Set max token size for H.235.6 (1024, 2048, 4096, ...)\n"
+#endif
 #ifdef H323_H46017
             "  -k --h46017          Use H.460.17 Gatekeeper\n"
 #endif
@@ -348,6 +357,25 @@ void CallGen::Main()
     h323->DisableFastStart(TRUE);
   if (args.HasOption('T'))
     h323->DisableH245Tunneling(TRUE);
+
+#ifdef H323_H235
+  if (args.HasOption("mediaenc"))  {
+    H323EndPoint::H235MediaCipher ncipher = H323EndPoint::encypt128;
+#ifdef H323_H235_AES256
+    unsigned maxtoken = 2048;
+    unsigned cipher = args.GetOptionString("mediaenc").AsInteger();
+    if (cipher >= H323EndPoint::encypt192) ncipher = H323EndPoint::encypt192;
+    if (cipher >= H323EndPoint::encypt256) ncipher = H323EndPoint::encypt256;
+    if (args.HasOption("maxtoken")) {
+      maxtoken = args.GetOptionString("maxtoken").AsInteger();
+    }
+#else
+    unsigned maxtoken = 1024;
+#endif
+    h323->SetH235MediaEncryption(H323EndPoint::encyptRequest, ncipher, maxtoken);
+    cout << "Enabled Media Encryption AES" << ncipher << endl;
+  }
+#endif
 
   unsigned bandwidth = 768; // default to 768 kbps
   if (args.HasOption('b')) {
