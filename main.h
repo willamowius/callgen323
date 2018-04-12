@@ -4,6 +4,7 @@
  * H.323 call generator
  *
  * Copyright (c) 2001 Benny L. Prijono <seventhson@theseventhson.freeserve.co.uk>
+ * Copyright (c) 2008-2018 Jan Willamowius <jan@willamowius.de>
  *
  * The contents of this file are subject to the Mozilla Public License
  * Version 1.0 (the "License"); you may not use this file except in
