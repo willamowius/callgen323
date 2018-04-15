@@ -808,7 +808,15 @@ H323Channel * MyH323Connection::CreateRealTimeLogicalChannel(const H323Capabilit
                                                 unsigned sessionID, const H245_H2250LogicalChannelParameters * param, RTP_QOS * rtpqos)
 {
     if (endpoint.IsFuzzing()) {
-        return new RTPFuzzingChannel(endpoint, *this, capability, dir, sessionID);
+        WORD rtpPort = 0;
+        map<unsigned, WORD>::const_iterator iter = m_sessionPorts.find(sessionID);
+        if (iter != m_sessionPorts.end()) {
+            rtpPort = iter->second;
+        } else {
+            rtpPort = endpoint.GetRtpIpPortPair();
+            m_sessionPorts[sessionID] = rtpPort;
+        }
+        return new RTPFuzzingChannel(endpoint, *this, capability, dir, sessionID, rtpPort, rtpPort+1);
     } else {
         // call super class
         return H323Connection::CreateRealTimeLogicalChannel(capability, dir, sessionID, param, rtpqos);
@@ -926,8 +934,8 @@ PBoolean MyH323Connection::OpenVideoChannel(PBoolean isEncoding, H323VideoCodec 
 
 ///////////////////////////////////////////////////////////////////////////////
 
-RTPFuzzingChannel::RTPFuzzingChannel(MyH323EndPoint & ep, H323Connection & connection, const H323Capability & capability, Directions direction, unsigned sessionID)
-    : H323_ExternalRTPChannel(connection, capability, direction, sessionID), m_rtpSocket(10000), m_rtcpSocket(10000 + 1)
+RTPFuzzingChannel::RTPFuzzingChannel(MyH323EndPoint & ep, H323Connection & connection, const H323Capability & capability, Directions direction, unsigned sessionID, WORD rtpPort, WORD rtcpPort)
+    : H323_ExternalRTPChannel(connection, capability, direction, sessionID)
 {
     m_percentBadRTPHeader = ep.GetPercentBadRTPHeader();
     m_percentBadRTPMedia = ep.GetPercentBadRTPMedia();
@@ -939,8 +947,10 @@ RTPFuzzingChannel::RTPFuzzingChannel(MyH323EndPoint & ep, H323Connection & conne
     }
 
     // set the local RTP address and port
-    WORD myport = 10000; // any UDP port, for now we ignore everything sent to that port
-    SetExternalAddress(H323TransportAddress(myip, myport), H323TransportAddress(myip, myport+1));
+    SetExternalAddress(H323TransportAddress(myip, rtpPort), H323TransportAddress(myip, rtcpPort));
+    // for now we ignore everything sent to these ports
+    m_rtpSocket.Listen(5, rtpPort);
+    m_rtcpSocket.Listen(5, rtcpPort);
 
     // get the payload code
     OpalMediaFormat format(capability.GetFormatName(), false);
@@ -952,6 +962,12 @@ RTPFuzzingChannel::RTPFuzzingChannel(MyH323EndPoint & ep, H323Connection & conne
     m_frameTime = format.GetFrameTime();
     m_frameTimeUnits = format.GetFrameTime() * format.GetTimeUnits();
     m_timestamp = 0;
+}
+
+RTPFuzzingChannel::~RTPFuzzingChannel()
+{
+    m_rtpSocket.Close();
+    m_rtcpSocket.Close();
 }
 
 PBoolean RTPFuzzingChannel::Start()

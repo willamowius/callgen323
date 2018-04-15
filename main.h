@@ -70,8 +70,8 @@ class RTPFuzzingChannel : public H323_ExternalRTPChannel
 {
     PCLASSINFO(RTPFuzzingChannel, H323_ExternalRTPChannel);
 public:
-    RTPFuzzingChannel(MyH323EndPoint & ep, H323Connection & connection, const H323Capability & capability, Directions direction, unsigned sessionID);
-    virtual ~RTPFuzzingChannel() { }
+    RTPFuzzingChannel(MyH323EndPoint & ep, H323Connection & connection, const H323Capability & capability, Directions direction, unsigned sessionID, WORD rtpPort, WORD rtcpPort);
+    virtual ~RTPFuzzingChannel();
 
     virtual PBoolean Start();
     PDECLARE_NOTIFIER(PTimer, RTPFuzzingChannel, TransmitRTP);
@@ -152,6 +152,7 @@ class MyH323Connection : public H323Connection
     MyH323EndPoint & endpoint;
     PVideoChannel * videoChannelIn;
     PVideoChannel * videoChannelOut;
+    map<unsigned, WORD> m_sessionPorts;
 };
 
 ///////////////////////////////////////////////////////////////////////////////
