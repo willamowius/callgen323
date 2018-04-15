@@ -173,7 +173,7 @@ void CallGen::Main()
             "  --tminwait secs      Minimum interval between calls in seconds [10]\n"
             "  --tmaxwait secs      Maximum interval between calls in seconds [30]\n"
             "  --fuzzing            Enable RTP fuzzing\n"
-            "  --fuzz-header        Percentage of RTP header to randomly overwrite [5]\n"
+            "  --fuzz-header        Percentage of RTP header to randomly overwrite [50]\n"
             "  --fuzz-media         Percentage of RTP media to randomly overwrite [0]\n"
             "  --fuzz-rtcp          Percentage of RTCP to randomly overwrite [5]\n"
             "\n"
@@ -726,7 +726,7 @@ MyH323EndPoint::MyH323EndPoint()
   SetFrameRate(30);
   useJitterBuffer = false; // save a little processing time
   SetFuzzing(false);
-  SetPercentBadRTPHeader(5);
+  SetPercentBadRTPHeader(50);
   SetPercentBadRTPMedia(0);
   SetPercentBadRTCP(5);
 }
