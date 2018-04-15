@@ -150,6 +150,7 @@ void CallGen::Main()
              "-rtp-base:"
              "-rtp-max:"
              "u-user:"
+             "-fuzzing."
              , FALSE);
 
   if (args.GetCount() == 0 && !args.HasOption('l')) {
@@ -210,6 +211,7 @@ void CallGen::Main()
             "  --tmaxcall secs      Maximum call duration in seconds [30]\n"
             "  --tminwait secs      Minimum interval between calls in seconds [10]\n"
             "  --tmaxwait secs      Maximum interval between calls in seconds [30]\n"
+            "  --fuzzing            Enable RTP fuzzing\n"
             "\n"
             "Notes:\n"
             "  If --tmaxest is set a non-zero value then --tmincall is the time to leave\n"
@@ -412,6 +414,10 @@ void CallGen::Main()
         h323->SetVideoFrameSize(H323Capability::cif16MPI);
   }
 #endif
+
+  if (args.HasOption("fuzzing")) {
+      h323->SetFuzzing(true);
+  }
 
   if (args.HasOption('l')) {
     cout << "Endpoint is listening for incoming calls, press ENTER to exit.\n";
@@ -746,6 +752,7 @@ MyH323EndPoint::MyH323EndPoint()
   SetVideoPattern("Fake/MovingBlocks");
   SetFrameRate(30);
   useJitterBuffer = false; // save a little processing time
+  SetFuzzing(false);
 }
 
 H323Connection * MyH323EndPoint::CreateConnection(unsigned callReference)
@@ -819,6 +826,17 @@ PBoolean MyH323Connection::OnSendSignalSetup(H323SignalPDU & setupPDU)
 	setupPDU.GetQ931().SetIE(Q931::BearerCapabilityIE, caps);
 
     return H323Connection::OnSendSignalSetup(setupPDU);
+}
+
+H323Channel * MyH323Connection::CreateRealTimeLogicalChannel(const H323Capability & capability, H323Channel::Directions dir,
+                                                unsigned sessionID, const H245_H2250LogicalChannelParameters * param, RTP_QOS * rtpqos)
+{
+    if (endpoint.IsFuzzing()) {
+        return new RTPFuzzingChannel(endpoint, *this, capability, dir, sessionID);
+    } else {
+        // call super class
+        return H323Connection::CreateRealTimeLogicalChannel(capability, dir, sessionID, param, rtpqos);
+    }
 }
 
 void MyH323Connection::OnRTPStatistics(const RTP_Session & session) const
@@ -931,6 +949,70 @@ PBoolean MyH323Connection::OpenVideoChannel(PBoolean isEncoding, H323VideoCodec 
 #endif
 
 ///////////////////////////////////////////////////////////////////////////////
+
+RTPFuzzingChannel::RTPFuzzingChannel(MyH323EndPoint & ep, H323Connection & connection, const H323Capability & capability, Directions direction, unsigned sessionID)
+    : H323_ExternalRTPChannel(connection, capability, direction, sessionID), m_rtpSocket(10000)
+{
+    PIPSocket::Address myip;
+    const H323ListenerList & listeners = ep.GetListeners();
+    if (listeners.GetSize() > 0) {
+        listeners[0].GetTransportAddress().GetIpAddress(myip);
+    }
+
+    // set the local RTP address and port
+    WORD myport = 10000; // any UDP port, for now we ignore everything sent to that port
+    SetExternalAddress(H323TransportAddress(myip, myport), H323TransportAddress(myip, myport+1));
+
+    // get the payload code
+    OpalMediaFormat format(capability.GetFormatName(), false);
+    m_rtpPacket.SetPayloadType(format.GetPayloadType());
+    m_rtpPacket.SetSyncSource(rand() * 65000);
+    m_rtpPacket.SetPayloadSize(format.GetFrameTime() * format.GetFrameSize()); // G.711: 20 ms * 8 byte
+    memset(m_rtpPacket.GetPayloadPtr(), 0, m_rtpPacket.GetPayloadSize()); // slilence
+//    // send random noise
+//    for (int i = 0; i < m_rtpPacket.GetPayloadSize(); i++) {
+//        *(m_rtpPacket.GetPayloadPtr() + i) = rand() * 255;
+//    }
+
+    m_frameTime = format.GetFrameTime();
+    m_frameTimeUnits = format.GetFrameTime() * format.GetTimeUnits();
+    m_timestamp = 0;
+}
+
+PBoolean RTPFuzzingChannel::Start()
+{
+    if (!H323_ExternalRTPChannel::Start())
+        return false;
+
+    if (GetDirection() == IsTransmitter) {
+        m_transmitTimer.RunContinuous(m_frameTime);
+        m_transmitTimer.SetNotifier(PCREATE_NOTIFIER(TransmitRTP));
+        PTRACE(0, "JW Transmit: remote RTP=" << remoteMediaAddress << " remote RTCP=" << remoteMediaControlAddress
+                << " local RTP=" << externalMediaAddress << " local RTCP=" << externalMediaControlAddress);
+        PIPSocket::Address ip;
+        WORD port = 0;
+        remoteMediaAddress.GetIpAndPort(ip, port);
+        m_rtpSocket.SetSendAddress(ip, port);
+    }
+    return true;
+}
+
+void RTPFuzzingChannel::TransmitRTP(PTimer &, H323_INT)
+{
+    m_timestamp += m_frameTimeUnits;
+    m_rtpPacket.SetTimestamp(m_timestamp);
+    m_rtpPacket.SetSequenceNumber(m_rtpPacket.GetSequenceNumber() + 1);
+    if (m_rtpPacket.GetSequenceNumber() % 2 == 1) {
+        // send random header for every 2nd packet
+        for (int i = 0; i < m_rtpPacket.GetHeaderSize(); i++) {
+            m_rtpPacket[i] = rand() * 255;
+        }
+    }
+    m_rtpSocket.Write(m_rtpPacket, m_rtpPacket.GetHeaderSize() + m_rtpPacket.GetPayloadSize());
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
 
 PlayMessage::PlayMessage(const PString & filename, unsigned frameDelay, unsigned frameSize)
   : PDelayChannel(PDelayChannel::DelayReadsOnly, frameDelay, frameSize)

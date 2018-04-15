@@ -79,6 +79,31 @@ class RecordMessage : public PDelayChannel
 
 ///////////////////////////////////////////////////////////////////////////////
 
+class MyH323EndPoint;
+
+class RTPFuzzingChannel : public H323_ExternalRTPChannel
+{
+public:
+    RTPFuzzingChannel(MyH323EndPoint & ep, H323Connection & connection, const H323Capability & capability, Directions direction, unsigned sessionID);
+    virtual ~RTPFuzzingChannel() { }
+
+    virtual PBoolean Start();
+    PDECLARE_NOTIFIER(PTimer, RTPFuzzingChannel, TransmitRTP);
+    //PDECLARE_NOTIFIER(PTimer, RTPFuzzingChannel, TransmitRTCP);
+
+protected:
+    PUDPSocket m_rtpSocket;
+    //PUDPSocket m_rtcpSocket;
+    RTP_DataFrame m_rtpPacket;
+    PTimer m_transmitTimer;
+    unsigned m_frameTime;
+    unsigned m_frameTimeUnits;
+    BYTE m_payloadType;
+    DWORD m_timestamp;
+};
+
+///////////////////////////////////////////////////////////////////////////////
+
 struct CallDetail
 {
   CallDetail()
@@ -125,6 +150,9 @@ class MyH323Connection : public H323Connection
     virtual PBoolean OpenVideoChannel(PBoolean isEncoding, H323VideoCodec & codec);
 #endif
 
+    virtual H323Channel * CreateRealTimeLogicalChannel(const H323Capability & capability, H323Channel::Directions dir,
+                                                       unsigned sessionID, const H245_H2250LogicalChannelParameters * param, RTP_QOS * rtpqos = NULL);
+
     virtual void OnRTPStatistics(const RTP_Session & session) const;
 
     CallDetail details;
@@ -134,7 +162,6 @@ class MyH323Connection : public H323Connection
     PVideoChannel * videoChannelIn;
     PVideoChannel * videoChannelOut;
 };
-
 
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -169,10 +196,14 @@ class MyH323EndPoint : public H323EndPoint
     void SetFrameRate(unsigned fps) { m_frameRate = fps; }
     unsigned GetFrameRate() const { return m_frameRate; }
 
+    void SetFuzzing(bool val) { m_fuzzing = val; }
+    bool IsFuzzing() const { return m_fuzzing; }
+
   protected:
     BYTE m_rateMultiplier;
     PString m_videoPattern;
     unsigned m_frameRate;
+    bool m_fuzzing;
 };
 
 ///////////////////////////////////////////////////////////////////////////////
