@@ -151,6 +151,9 @@ void CallGen::Main()
              "-rtp-max:"
              "u-user:"
              "-fuzzing."
+             "-fuzz-header:"
+             "-fuzz-media:"
+             "-fuzz-rtcp:"
              , FALSE);
 
   if (args.GetCount() == 0 && !args.HasOption('l')) {
@@ -212,6 +215,9 @@ void CallGen::Main()
             "  --tminwait secs      Minimum interval between calls in seconds [10]\n"
             "  --tmaxwait secs      Maximum interval between calls in seconds [30]\n"
             "  --fuzzing            Enable RTP fuzzing\n"
+            "  --fuzz-header        Percentage of RTP header to randomly overwrite [5]\n"
+            "  --fuzz-media         Percentage of RTP media to randomly overwrite [0]\n"
+            "  --fuzz-rtcp          Percentage of RTCP to randomly overwrite [5]\n"
             "\n"
             "Notes:\n"
             "  If --tmaxest is set a non-zero value then --tmincall is the time to leave\n"
@@ -417,6 +423,15 @@ void CallGen::Main()
 
   if (args.HasOption("fuzzing")) {
       h323->SetFuzzing(true);
+  }
+  if (args.HasOption("fuzz-header")) {
+      h323->SetPercentBadRTPHeader(args.GetOptionString("fuzz-header").AsUnsigned());
+  }
+  if (args.HasOption("fuzz-media")) {
+      h323->SetPercentBadRTPMedia(args.GetOptionString("fuzz-media").AsUnsigned());
+  }
+  if (args.HasOption("fuzz-rtcp")) {
+      h323->SetPercentBadRTCP(args.GetOptionString("fuzz-rtcp").AsUnsigned());
   }
 
   if (args.HasOption('l')) {
@@ -753,6 +768,9 @@ MyH323EndPoint::MyH323EndPoint()
   SetFrameRate(30);
   useJitterBuffer = false; // save a little processing time
   SetFuzzing(false);
+  SetPercentBadRTPHeader(5);
+  SetPercentBadRTPMedia(0);
+  SetPercentBadRTCP(5);
 }
 
 H323Connection * MyH323EndPoint::CreateConnection(unsigned callReference)
@@ -951,8 +969,11 @@ PBoolean MyH323Connection::OpenVideoChannel(PBoolean isEncoding, H323VideoCodec 
 ///////////////////////////////////////////////////////////////////////////////
 
 RTPFuzzingChannel::RTPFuzzingChannel(MyH323EndPoint & ep, H323Connection & connection, const H323Capability & capability, Directions direction, unsigned sessionID)
-    : H323_ExternalRTPChannel(connection, capability, direction, sessionID), m_rtpSocket(10000)
+    : H323_ExternalRTPChannel(connection, capability, direction, sessionID), m_rtpSocket(10000), m_rtcpSocket(10000 + 1)
 {
+    m_percentBadRTPHeader = ep.GetPercentBadRTPHeader();
+    m_percentBadRTPMedia = ep.GetPercentBadRTPMedia();
+    m_percentBadRTCP = ep.GetPercentBadRTCP();
     PIPSocket::Address myip;
     const H323ListenerList & listeners = ep.GetListeners();
     if (listeners.GetSize() > 0) {
@@ -965,14 +986,10 @@ RTPFuzzingChannel::RTPFuzzingChannel(MyH323EndPoint & ep, H323Connection & conne
 
     // get the payload code
     OpalMediaFormat format(capability.GetFormatName(), false);
-    m_rtpPacket.SetPayloadType(format.GetPayloadType());
-    m_rtpPacket.SetSyncSource(rand() * 65000);
+    m_payloadType = format.GetPayloadType();
+    m_syncSource = PRandom::Number(65000);
     m_rtpPacket.SetPayloadSize(format.GetFrameTime() * format.GetFrameSize()); // G.711: 20 ms * 8 byte
     memset(m_rtpPacket.GetPayloadPtr(), 0, m_rtpPacket.GetPayloadSize()); // slilence
-//    // send random noise
-//    for (int i = 0; i < m_rtpPacket.GetPayloadSize(); i++) {
-//        *(m_rtpPacket.GetPayloadPtr() + i) = rand() * 255;
-//    }
 
     m_frameTime = format.GetFrameTime();
     m_frameTimeUnits = format.GetFrameTime() * format.GetTimeUnits();
@@ -985,30 +1002,76 @@ PBoolean RTPFuzzingChannel::Start()
         return false;
 
     if (GetDirection() == IsTransmitter) {
-        m_transmitTimer.RunContinuous(m_frameTime);
-        m_transmitTimer.SetNotifier(PCREATE_NOTIFIER(TransmitRTP));
-        PTRACE(0, "JW Transmit: remote RTP=" << remoteMediaAddress << " remote RTCP=" << remoteMediaControlAddress
-                << " local RTP=" << externalMediaAddress << " local RTCP=" << externalMediaControlAddress);
+        m_rtpTransmitTimer.RunContinuous(m_frameTime);
+        m_rtpTransmitTimer.SetNotifier(PCREATE_NOTIFIER(TransmitRTP));
+        m_rtcpTransmitTimer.RunContinuous(m_frameTime); // way more often than regular RTCP, but we want to get a lot of test cases through
+        m_rtcpTransmitTimer.SetNotifier(PCREATE_NOTIFIER(TransmitRTCP));
         PIPSocket::Address ip;
         WORD port = 0;
         remoteMediaAddress.GetIpAndPort(ip, port);
         m_rtpSocket.SetSendAddress(ip, port);
+        remoteMediaControlAddress.GetIpAndPort(ip, port);
+        m_rtcpSocket.SetSendAddress(ip, port);
     }
     return true;
 }
 
 void RTPFuzzingChannel::TransmitRTP(PTimer &, H323_INT)
 {
+    m_rtpPacket.SetPayloadType(m_payloadType);
+    m_rtpPacket.SetSyncSource(m_syncSource);
     m_timestamp += m_frameTimeUnits;
     m_rtpPacket.SetTimestamp(m_timestamp);
     m_rtpPacket.SetSequenceNumber(m_rtpPacket.GetSequenceNumber() + 1);
-    if (m_rtpPacket.GetSequenceNumber() % 2 == 1) {
-        // send random header for every 2nd packet
-        for (int i = 0; i < m_rtpPacket.GetHeaderSize(); i++) {
-            m_rtpPacket[i] = rand() * 255;
+
+    for (int i = 0; i < m_rtpPacket.GetHeaderSize(); i++) {
+        // overwrite n% of the bytes with random values
+        if (PRandom::Number(100) > (100 - m_percentBadRTPHeader)) {
+            m_rtpPacket[i] = PRandom::Number(255);
         }
     }
+
+    // random RTP media
+    for (int i = 0; i < m_rtpPacket.GetPayloadSize(); i++) {
+        if (PRandom::Number(100) > (100 - m_percentBadRTPMedia)) {
+            *(m_rtpPacket.GetPayloadPtr() + i) = PRandom::Number(255);
+        }
+    }
+
     m_rtpSocket.Write(m_rtpPacket, m_rtpPacket.GetHeaderSize() + m_rtpPacket.GetPayloadSize());
+}
+
+void RTPFuzzingChannel::TransmitRTCP(PTimer &, H323_INT)
+{
+    const unsigned SecondsFrom1900to1970 = (70*365+17)*24*60*60U;
+    RTP_ControlFrame m_rtcpPacket;
+
+    m_rtcpPacket.SetPayloadType(RTP_ControlFrame::e_SenderReport);
+    m_rtcpPacket.SetPayloadSize(sizeof(RTP_ControlFrame::SenderReport));
+
+    RTP_ControlFrame::SenderReport * sender = (RTP_ControlFrame::SenderReport *)m_rtcpPacket.GetPayloadPtr();
+    sender->ssrc = m_syncSource;
+    PTime now;
+    sender->ntp_sec = now.GetTimeInSeconds()+SecondsFrom1900to1970; // Convert from 1970 to 1900
+    sender->ntp_frac = now.GetMicrosecond()*4294; // Scale microseconds to "fraction" from 0 to 2^32
+    sender->rtp_ts = m_timestamp;
+    sender->psent = m_rtpPacket.GetSequenceNumber();
+    sender->osent = m_rtpPacket.GetSequenceNumber() * m_rtpPacket.GetPayloadSize();
+    m_rtcpPacket.SetPayloadSize(sizeof(RTP_ControlFrame::SenderReport) + sizeof(RTP_ControlFrame::ReceiverReport));
+    m_rtcpPacket.SetCount(1);
+    //AddReceiverReport(*(RTP_ControlFrame::ReceiverReport *)&sender[1]);
+    m_rtcpPacket.WriteNextCompound();
+    RTP_ControlFrame::SourceDescription & sdes = m_rtcpPacket.AddSourceDescription(m_syncSource);
+
+    // send random RTCP packet every time
+    for (int i = 0; i < m_rtcpPacket.GetCompoundSize(); i++) {
+        // overwrite n% of the bytes with random values
+        if (PRandom::Number(100) > (100 - m_percentBadRTCP)) {
+            m_rtcpPacket[i] = PRandom::Number(255);
+        }
+    }
+
+    m_rtcpSocket.Write(m_rtcpPacket, m_rtcpPacket.GetCompoundSize());
 }
 
 ///////////////////////////////////////////////////////////////////////////////

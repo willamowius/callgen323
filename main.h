@@ -89,17 +89,22 @@ public:
 
     virtual PBoolean Start();
     PDECLARE_NOTIFIER(PTimer, RTPFuzzingChannel, TransmitRTP);
-    //PDECLARE_NOTIFIER(PTimer, RTPFuzzingChannel, TransmitRTCP);
+    PDECLARE_NOTIFIER(PTimer, RTPFuzzingChannel, TransmitRTCP);
 
 protected:
     PUDPSocket m_rtpSocket;
-    //PUDPSocket m_rtcpSocket;
+    PUDPSocket m_rtcpSocket;
     RTP_DataFrame m_rtpPacket;
-    PTimer m_transmitTimer;
+    PTimer m_rtpTransmitTimer;
+    PTimer m_rtcpTransmitTimer;
     unsigned m_frameTime;
     unsigned m_frameTimeUnits;
-    BYTE m_payloadType;
+    RTP_DataFrame::PayloadTypes m_payloadType;
+    DWORD m_syncSource;
     DWORD m_timestamp;
+    unsigned m_percentBadRTPHeader;
+    unsigned m_percentBadRTPMedia;
+    unsigned m_percentBadRTCP;
 };
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -198,12 +203,21 @@ class MyH323EndPoint : public H323EndPoint
 
     void SetFuzzing(bool val) { m_fuzzing = val; }
     bool IsFuzzing() const { return m_fuzzing; }
+    void SetPercentBadRTPHeader(unsigned val) { m_percentBadRTPHeader = val; }
+    unsigned GetPercentBadRTPHeader() const { return m_percentBadRTPHeader; }
+    void SetPercentBadRTPMedia(unsigned val) { m_percentBadRTPMedia = val; }
+    unsigned GetPercentBadRTPMedia() const { return m_percentBadRTPMedia; }
+    void SetPercentBadRTCP(unsigned val) { m_percentBadRTCP = val; }
+    unsigned GetPercentBadRTCP() const { return m_percentBadRTCP; }
 
   protected:
     BYTE m_rateMultiplier;
     PString m_videoPattern;
     unsigned m_frameRate;
     bool m_fuzzing;
+    unsigned m_percentBadRTPHeader;
+    unsigned m_percentBadRTPMedia;
+    unsigned m_percentBadRTCP;
 };
 
 ///////////////////////////////////////////////////////////////////////////////
