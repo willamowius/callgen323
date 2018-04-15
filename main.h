@@ -9,7 +9,7 @@
  * The contents of this file are subject to the Mozilla Public License
  * Version 1.0 (the "License"); you may not use this file except in
  * compliance with the License. You may obtain a copy of the License at
- * http://www.mozilla.org/MPL/
+ * https://www.mozilla.org/MPL/
  *
  * Software distributed under the License is distributed on an "AS IS"
  * basis, WITHOUT WARRANTY OF ANY KIND, either express or implied. See
@@ -22,21 +22,6 @@
  *
  * Contributor(s): Equivalence Pty. Ltd.
  *
- * $Log$
- * Revision 1.3  2008/09/03 12:21:24  willamowius
- * switch BOOL to PBoolean to be able to compile with Ptlib 2.2.x
- *
- * Revision 1.2  2008/02/07 10:13:32  shorne
- * added video support
- *
- * Revision 1.1  2007/11/21 14:53:51  shorne
- * First commit to h323plus
- *
- *
- *
- * 25 Jan 2002 Substantial improvement [Equivalence Pty. Ltd.]
- * 25 Jan 2000 Update to incorporate openh323 v.01 alpha2 and fix gatekeeper
- *              related codes [bennylp]
  */
 
 
@@ -83,6 +68,7 @@ class MyH323EndPoint;
 
 class RTPFuzzingChannel : public H323_ExternalRTPChannel
 {
+    PCLASSINFO(RTPFuzzingChannel, H323_ExternalRTPChannel);
 public:
     RTPFuzzingChannel(MyH323EndPoint & ep, H323Connection & connection, const H323Capability & capability, Directions direction, unsigned sessionID);
     virtual ~RTPFuzzingChannel() { }
@@ -187,10 +173,8 @@ class MyH323EndPoint : public H323EndPoint
       H323Connection & connection,    /// Connection that was established
       const PString & token           /// Token for identifying connection
     );
-    PBoolean OnStartLogicalChannel(
-      H323Connection & connection,
-      H323Channel & PTRACE_channel
-    );
+    PBoolean OnStartLogicalChannel(H323Connection & connection, H323Channel & PTRACE_channel);
+
     // TODO: include in codec negotiations, only sets bearer capabilities right now
     void SetPerCallBandwidth(unsigned bw) { m_rateMultiplier = ceil((float)bw / 64); }
     BYTE GetRateMultiplier() const { return m_rateMultiplier; }

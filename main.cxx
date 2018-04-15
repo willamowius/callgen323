@@ -9,7 +9,7 @@
  * The contents of this file are subject to the Mozilla Public License
  * Version 1.0 (the "License"); you may not use this file except in
  * compliance with the License. You may obtain a copy of the License at
- * http://www.mozilla.org/MPL/
+ * https://www.mozilla.org/MPL/
  *
  * Software distributed under the License is distributed on an "AS IS"
  * basis, WITHOUT WARRANTY OF ANY KIND, either express or implied. See
@@ -22,48 +22,6 @@
  *
  * Contributor(s): Equivalence Pty. Ltd.
  *
- * $Log$
- * Revision 1.12  2012/11/03 01:11:07  willamowius
- * add H.460.17 support
- *
- * Revision 1.11  2010/11/02 11:14:34  willamowius
- * use same trace format as GnuGk
- *
- * Revision 1.10  2010/05/25 20:17:14  willamowius
- * fix compile without video enabled
- *
- * Revision 1.9  2010/05/17 14:51:35  willamowius
- * avoid zombies from H.264 plugin helper
- *
- * Revision 1.8  2010/04/13 10:08:53  willamowius
- * -m was used for 2 different switches
- *
- * Revision 1.7  2010/01/18 22:32:21  willamowius
- * add support for 16cif
- *
- * Revision 1.6  2010/01/18 22:06:09  willamowius
- * check device pointer before using it
- *
- * Revision 1.5  2010/01/18 21:11:51  willamowius
- * fix bug in usage of memset()
- *
- * Revision 1.4  2009/01/21 01:26:52  willamowius
- * fixed OpenIVR application for current H323Plus/PTLib
- *
- * Revision 1.3  2008/09/03 12:21:24  willamowius
- * switch BOOL to PBoolean to be able to compile with Ptlib 2.2.x
- *
- * Revision 1.2  2008/02/07 10:13:32  shorne
- * added video support
- *
- * Revision 1.1  2007/11/21 14:53:51  shorne
- * First commit to h323plus
- *
- *
- * 2008 - 2017 Fixing and feature extensions [Jan Willamowius]
- * 25 Jan 2002 Substantial improvement [Equivalence Pty. Ltd.]
- * 25 Jan 2000 Update to incorporate openh323 v.01 alpha2 and fix gatekeeper
- *             related codes [bennylp]
  */
 
 #include <ptlib.h>
@@ -199,7 +157,7 @@ void CallGen::Main()
             "  --maxframe           Maximum Frame Size\n"
 #endif
             "  -f --fast-disable    Disable fast start\n"
-            "  -T --h245tunneldisable  Disable H245 tunnelling\n"
+            "  -T --h245tunneldisable  Disable H245 tunneling\n"
             "  -O --out-msg file    Specify PCM16 WAV file for outgoing message [ogm.wav]\n"
             "  -I --in-dir dir      Specify directory for incoming WAV files [disabled]\n"
             "  -c --cdr file        Specify Call Detail Record file [none]\n"
@@ -693,7 +651,7 @@ void CallDetail::Drop(H323Connection & connection)
                "CONNECT time,"
                "Call End Reason,"
                "Remote party,"
-               "Signalling gateway,"
+               "Signaling gateway,"
                "Media gateway,"
                "Call Id,"
                "Call Token\n";
@@ -865,7 +823,7 @@ void MyH323Connection::OnRTPStatistics(const RTP_Session & session) const
 PBoolean MyH323Connection::OpenAudioChannel(PBoolean isEncoding, unsigned bufferSize, H323AudioCodec & codec)
 {
 
-  unsigned frameDelay = bufferSize/16; // Assume 16 bit PCM
+  unsigned frameDelay = bufferSize/16; // assume 16 bit PCM
 
   PIndirectChannel * channel;
   if (isEncoding)
@@ -989,7 +947,7 @@ RTPFuzzingChannel::RTPFuzzingChannel(MyH323EndPoint & ep, H323Connection & conne
     m_payloadType = format.GetPayloadType();
     m_syncSource = PRandom::Number(65000);
     m_rtpPacket.SetPayloadSize(format.GetFrameTime() * format.GetFrameSize()); // G.711: 20 ms * 8 byte
-    memset(m_rtpPacket.GetPayloadPtr(), 0, m_rtpPacket.GetPayloadSize()); // slilence
+    memset(m_rtpPacket.GetPayloadPtr(), 0, m_rtpPacket.GetPayloadSize()); // silence
 
     m_frameTime = format.GetFrameTime();
     m_frameTimeUnits = format.GetFrameTime() * format.GetTimeUnits();
@@ -1052,8 +1010,8 @@ void RTPFuzzingChannel::TransmitRTCP(PTimer &, H323_INT)
     RTP_ControlFrame::SenderReport * sender = (RTP_ControlFrame::SenderReport *)m_rtcpPacket.GetPayloadPtr();
     sender->ssrc = m_syncSource;
     PTime now;
-    sender->ntp_sec = now.GetTimeInSeconds()+SecondsFrom1900to1970; // Convert from 1970 to 1900
-    sender->ntp_frac = now.GetMicrosecond()*4294; // Scale microseconds to "fraction" from 0 to 2^32
+    sender->ntp_sec = now.GetTimeInSeconds() + SecondsFrom1900to1970; // Convert from 1970 to 1900
+    sender->ntp_frac = now.GetMicrosecond() * 4294; // Scale microseconds to "fraction" from 0 to 2^32
     sender->rtp_ts = m_timestamp;
     sender->psent = m_rtpPacket.GetSequenceNumber();
     sender->osent = m_rtpPacket.GetSequenceNumber() * m_rtpPacket.GetPayloadSize();
@@ -1061,7 +1019,7 @@ void RTPFuzzingChannel::TransmitRTCP(PTimer &, H323_INT)
     m_rtcpPacket.SetCount(1);
     //AddReceiverReport(*(RTP_ControlFrame::ReceiverReport *)&sender[1]);
     m_rtcpPacket.WriteNextCompound();
-    RTP_ControlFrame::SourceDescription & sdes = m_rtcpPacket.AddSourceDescription(m_syncSource);
+    (void)m_rtcpPacket.AddSourceDescription(m_syncSource);
 
     // send random RTCP packet every time
     for (int i = 0; i < m_rtcpPacket.GetCompoundSize(); i++) {
@@ -1105,7 +1063,7 @@ PlayMessage::PlayMessage(const PString & filename, unsigned frameDelay, unsigned
 PBoolean PlayMessage::Read(void * buf, PINDEX len)
 {
   if (!wavFile.IsOpen()) {
-    // Just play out silence
+    // just play out silence
     memset(buf, 0, len);
     lastReadCount = len;
     return TRUE;
