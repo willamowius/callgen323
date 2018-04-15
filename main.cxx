@@ -944,10 +944,11 @@ PlayMessage::PlayMessage(const PString & filename, unsigned frameDelay, unsigned
           || wavFile.GetChannels() != 1
           || wavFile.GetSampleRate() != 8000
           || wavFile.GetSampleSize() != 16) {
-        PTRACE(2, "CallGen\tPlaying outgoing message file \"" << wavFile.GetFilePath() << '"');
-      } else {
+
         wavFile.Close();
         PTRACE(2, "CallGen\tWrong file format in outgoing message file \"" << wavFile.GetFilePath() << '"');
+      } else {
+        PTRACE(2, "CallGen\tPlaying outgoing message file \"" << wavFile.GetFilePath() << '"');
       }
     }
     else {
