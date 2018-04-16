@@ -1042,9 +1042,14 @@ void RTPFuzzingChannel::TransmitRTCP(PTimer &, H323_INT)
     sender->rtp_ts = m_timestamp;
     sender->psent = m_rtpPacket.GetSequenceNumber();
     sender->osent = m_rtpPacket.GetSequenceNumber() * m_rtpPacket.GetPayloadSize();
+/*
+    // TODO: add Receiver report
+    // TODO: etPayloadType(RTP_ControlFrame::e_ReceiverReport)
     m_rtcpPacket.SetPayloadSize(sizeof(RTP_ControlFrame::SenderReport) + sizeof(RTP_ControlFrame::ReceiverReport));
     m_rtcpPacket.SetCount(1);
+    // TODO: insert ReceiverReport data, for now rely on the random data we insert
     //AddReceiverReport(*(RTP_ControlFrame::ReceiverReport *)&sender[1]);
+*/
     m_rtcpPacket.WriteNextCompound();
     (void)m_rtcpPacket.AddSourceDescription(m_syncSource);
 
