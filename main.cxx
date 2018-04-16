@@ -955,13 +955,23 @@ RTPFuzzingChannel::RTPFuzzingChannel(MyH323EndPoint & ep, H323Connection & conne
     // get the payload code
     OpalMediaFormat format(capability.GetFormatName(), false);
     m_payloadType = format.GetPayloadType();
+    if (m_payloadType > RTP_DataFrame::MaxPayloadType)
+        m_payloadType = RTP_DataFrame::DynamicBase;
     m_syncSource = PRandom::Number(65000);
     m_rtpPacket.SetPayloadSize(format.GetFrameTime() * format.GetFrameSize()); // G.711: 20 ms * 8 byte
+    if (m_rtpPacket.GetPayloadSize() == 0)
+        m_rtpPacket.SetPayloadSize(1400); // eg. for video there is no fixed size
     memset(m_rtpPacket.GetPayloadPtr(), 0, m_rtpPacket.GetPayloadSize()); // silence
 
     m_frameTime = format.GetFrameTime();
-    m_frameTimeUnits = format.GetFrameTime() * format.GetTimeUnits();
+    if (m_frameTime == 0)
+        m_frameTime = 100;
+    m_frameTimeUnits = m_frameTime * format.GetTimeUnits();
+    if (m_frameTimeUnits == 0)
+        m_frameTimeUnits = m_frameTime * 8;
     m_timestamp = 0;
+    PTRACE(2, "New fuzzing transmit channel: PT=" << (int)m_payloadType << " frame time=" << m_frameTime
+           << " frame size=" << m_rtpPacket.GetPayloadSize());
 }
 
 RTPFuzzingChannel::~RTPFuzzingChannel()
@@ -1012,6 +1022,7 @@ void RTPFuzzingChannel::TransmitRTP(PTimer &, H323_INT)
         }
     }
 
+    PTRACE(2, "Sending fuzzed RTP to " << remoteMediaControlAddress << " payload type=" << m_rtpPacket.GetPayloadType());
     m_rtpSocket.Write(m_rtpPacket, m_rtpPacket.GetHeaderSize() + m_rtpPacket.GetPayloadSize());
 }
 
@@ -1045,6 +1056,7 @@ void RTPFuzzingChannel::TransmitRTCP(PTimer &, H323_INT)
         }
     }
 
+    PTRACE(2, "Sending fuzzed RTCP to " << remoteMediaControlAddress);
     m_rtcpSocket.Write(m_rtcpPacket, m_rtcpPacket.GetCompoundSize());
 }
 
