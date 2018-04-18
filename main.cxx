@@ -219,12 +219,29 @@ void CallGen::Main()
     incomingAudioDirectory = PString::Empty();
   }
 
-  PStringArray interfaces = args.GetOptionString('i').Lines();
-  if (!h323->StartListeners(interfaces)) {
-    cout << "Couldn't start any listeners on interfaces/ports:\n"
-         << setfill('\n') << interfaces << setfill(' ') << endl;
+  // start the H.323 listener
+  H323ListenerTCP * listener = NULL;
+  PIPSocket::Address interfaceAddress(INADDR_ANY);
+  WORD listenPort = H323EndPoint::DefaultTcpPort;
+  if (args.HasOption('i')) {
+    PString interface = args.GetOptionString('i');
+    PINDEX colon = interface.Find(":");
+    if (colon != P_MAX_INDEX) {
+      interfaceAddress = interface.Left(colon);
+      listenPort = interface.Mid(colon + 1).AsUnsigned();
+    } else {
+      interfaceAddress = interface;
+    }
+  }
+
+  listener = new H323ListenerTCP(*h323, interfaceAddress, listenPort);
+
+  if (!h323->StartListener(listener)) {
+    cout << "Could not open H.323 listener port on " << interfaceAddress << ":" << listener->GetListenerPort() << endl;
+    delete listener;
     return;
   }
+
   cout << "H.323 listening on: " << setfill(',') << h323->GetListeners() << setfill(' ') << endl;
 
   if (args.HasOption('c')) {
@@ -300,9 +317,9 @@ void CallGen::Main()
 #endif
       PString gkAddr = args.GetOptionString('g');
       cout << "Registering with gatekeeper \"" << gkAddr << "\" ..." << flush;
-      if (h323->UseGatekeeper(gkAddr))
+      if (h323->SetGatekeeper(gkAddr, new H323TransportUDP(*h323, interfaceAddress))) {
         cout << "\nGatekeeper set to \"" << *h323->GetGatekeeper() << '"' << endl;
-      else {
+      } else {
         cout << "\nError registering with gatekeeper at \"" << gkAddr << '"' << endl;
         return;
       }
