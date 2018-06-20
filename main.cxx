@@ -3,8 +3,8 @@
  *
  * H.323 call generator
  *
- * Copyright (c) 2001 Benny L. Prijono <seventhson@theseventhson.freeserve.co.uk>
  * Copyright (c) 2008-2018 Jan Willamowius <jan@willamowius.de>
+ * Copyright (c) 2001 Benny L. Prijono <seventhson@theseventhson.freeserve.co.uk>
  *
  * The contents of this file are subject to the Mozilla Public License
  * Version 1.0 (the "License"); you may not use this file except in
@@ -77,6 +77,9 @@ void CallGen::Main()
 #ifdef H323_H46023
              "-h46023enable."
 #endif
+#ifdef H323_H239
+             "-h239enable."
+#endif
              "I-in-dir:"
              "i-interface:"
              "l-listen."
@@ -142,6 +145,9 @@ void CallGen::Main()
 #endif
 #ifdef H323_H46023
             "  --h46023enable       Enable H.460.23/.24\n"
+#endif
+#ifdef H323_H239
+            "  --h239enable         Enable sending and receiving H.239 presentations\n"
 #endif
             "  -n --no-gatekeeper   Disable gatekeeper discovery [false]\n"
             "  --require-gatekeeper Exit if gatekeeper discovery fails [false]\n"
@@ -265,6 +271,14 @@ void CallGen::Main()
     h323->SetRtpIpPorts(args.GetOptionString("rtp-base").AsUnsigned(),
                        args.GetOptionString("rtp-max").AsUnsigned());
 
+#ifdef H323_H239
+  if (args.HasOption("h239enable")) {
+    cout << "Enabeling H.239" << endl;
+  } else {
+    cout << "Disabeling H.239" << endl;
+    h323->RemoveCapabilities(PStringArray("H.239"));
+  }
+#endif
   h323->RemoveCapabilities(args.GetOptionString('D').Lines());
   h323->ReorderCapabilities(args.GetOptionString('P').Lines());
   cout << "Local capabilities:\n" << h323->GetCapabilities() << endl;
@@ -483,8 +497,7 @@ void CallGen::Main()
   }
 
   if (totalAttempts > 0)
-    cout << "Total calls: " << totalAttempts
-         << " attempted, " << totalEstablished << " established\n";
+    cout << "Total calls: " << totalAttempts << " attempted, " << totalEstablished << " established\n";
 
   // delete endpoint object so we unregister cleanly
   delete h323;
@@ -736,7 +749,7 @@ MyH323EndPoint::MyH323EndPoint()
   LoadBaseFeatureSet();
 
   // Set capability
-  AddAllCapabilities(0, 0, "*");
+  AddAllCapabilities(0, P_MAX_INDEX, "*");
   AddAllUserInputCapabilities(0, P_MAX_INDEX);
   SetPerCallBandwidth(384);
   SetVideoPattern("Fake/MovingBlocks");
@@ -946,8 +959,33 @@ PBoolean MyH323Connection::OpenVideoChannel(PBoolean isEncoding, H323VideoCodec 
     videoChannelIn->AttachVideoPlayer((PVideoOutputDevice *)device);
     return codec.AttachChannel(videoChannelIn, false);
   }
-};
-#endif
+}
+
+#ifdef H323_H239
+PBoolean MyH323Connection::OnInitialFlowRestriction(H323Channel & channel)
+{
+    // start the H.239 channel after the other side has sent an OLC for H.239 and received the OLCAck
+    if ((channel.GetCapability().GetMainType() == H323Capability::e_Video)
+        && (channel.GetCapability().GetSubType() == H245_VideoCapability::e_extendedVideoCapability)
+        && (channel.GetDirection() == H323Channel::IsReceiver)) {
+        PTRACE(1, "Starting H.239");
+        if (OpenH239Channel()) {
+            PTRACE(1, "H.239 channel open");
+        } else {
+            PTRACE(1, "H.239 channel failed");
+        }
+    }
+    return true;
+}
+
+PBoolean MyH323Connection::OpenExtendedVideoChannel(PBoolean isEncoding, H323VideoCodec & codec)
+{
+    // send same test pattern as regular video channel
+    return OpenVideoChannel(isEncoding, codec);
+}
+#endif // H323_H239
+
+#endif // H323_VIDEO
 
 ///////////////////////////////////////////////////////////////////////////////
 

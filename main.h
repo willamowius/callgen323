@@ -139,6 +139,10 @@ class MyH323Connection : public H323Connection
 
 #ifdef H323_VIDEO
     virtual PBoolean OpenVideoChannel(PBoolean isEncoding, H323VideoCodec & codec);
+#ifdef H323_H239
+    virtual PBoolean OnInitialFlowRestriction(H323Channel & channel);
+	virtual PBoolean OpenExtendedVideoChannel(PBoolean isEncoding, H323VideoCodec & codec);
+#endif
 #endif
 
     virtual H323Channel * CreateRealTimeLogicalChannel(const H323Capability & capability, H323Channel::Directions dir,
