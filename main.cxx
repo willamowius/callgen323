@@ -97,7 +97,7 @@ void CallGen::Main()
 			 "v-video."
 			 "-videopattern:"
 			 "R-framerate:"
-			 "-maxframe."
+			 "-maxframe:"
 #endif
              "-tmaxest:"
              "-tmincall:"
@@ -160,7 +160,7 @@ void CallGen::Main()
             "  -v --video           Enable Video Support\n"
             "     --videopattern    Set video pattern to send, eg. 'Fake/BouncingBoxes' or 'Fake/MovingBlocks'\n"
             "  -R --framerate n     Set frame rate for outgoing video (fps)\n"
-            "  --maxframe           Maximum Frame Size\n"
+            "  --maxframe name      Maximum Frame Size (qcif, cif, 4cif, 16cif)\n"
 #endif
             "  -f --fast-disable    Disable fast start\n"
             "  -T --h245tunneldisable  Disable H245 tunneling\n"
