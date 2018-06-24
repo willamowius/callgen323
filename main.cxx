@@ -160,7 +160,7 @@ void CallGen::Main()
             "  -v --video           Enable Video Support\n"
             "     --videopattern    Set video pattern to send, eg. 'Fake/BouncingBoxes' or 'Fake/MovingBlocks'\n"
             "  -R --framerate n     Set frame rate for outgoing video (fps)\n"
-            "  --maxframe name      Maximum Frame Size (qcif, cif, 4cif, 16cif)\n"
+            "  --maxframe name      Maximum Frame Size (qcif, cif, 4cif, 16cif, 480i, 720p, 1080i)\n"
 #endif
             "  -f --fast-disable    Disable fast start\n"
             "  -T --h245tunneldisable  Disable H245 tunneling\n"
@@ -409,6 +409,16 @@ void CallGen::Main()
         h323->SetVideoFrameSize(H323Capability::cif4MPI);
 	else if (maxframe == "16cif")
         h323->SetVideoFrameSize(H323Capability::cif16MPI);
+	else if (maxframe == "480i")
+        h323->SetVideoFrameSize(H323Capability::i480MPI);
+	else if (maxframe == "720p")
+        h323->SetVideoFrameSize(H323Capability::p720MPI);
+	else if (maxframe == "1080i")
+        h323->SetVideoFrameSize(H323Capability::i1080MPI);
+    else {
+      cerr << "Unknown maxframe value: " << maxframe << endl;
+      return;
+    }
   }
 #endif
 
