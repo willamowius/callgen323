@@ -157,6 +157,7 @@ class MyH323Connection : public H323Connection
     PVideoChannel * videoChannelIn;
     PVideoChannel * videoChannelOut;
     map<unsigned, WORD> m_sessionPorts;
+    bool m_haveStartedH239;
 };
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -199,6 +200,9 @@ class MyH323EndPoint : public H323EndPoint
     void SetPercentBadRTCP(unsigned val) { m_percentBadRTCP = val; }
     unsigned GetPercentBadRTCP() const { return m_percentBadRTCP; }
 
+    void SetStartH239(bool start) { m_startH239 = start; }
+    bool IsStartH239() const { return m_startH239; }
+
   protected:
     BYTE m_rateMultiplier;
     PString m_videoPattern;
@@ -207,6 +211,7 @@ class MyH323EndPoint : public H323EndPoint
     unsigned m_percentBadRTPHeader;
     unsigned m_percentBadRTPMedia;
     unsigned m_percentBadRTCP;
+    bool m_startH239;
 };
 
 ///////////////////////////////////////////////////////////////////////////////

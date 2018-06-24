@@ -274,6 +274,8 @@ void CallGen::Main()
 #ifdef H323_H239
   if (args.HasOption("h239enable")) {
     cout << "Enabeling H.239" << endl;
+    if (!args.HasOption('l'))
+        h323->SetStartH239(true);   // only the calling call generator starts a H.239 channel
   } else {
     cout << "Disabeling H.239" << endl;
     h323->RemoveCapabilities(PStringArray("H.239"));
@@ -759,6 +761,7 @@ MyH323EndPoint::MyH323EndPoint()
   SetPercentBadRTPHeader(50);
   SetPercentBadRTPMedia(0);
   SetPercentBadRTCP(5);
+  SetStartH239(false);
 }
 
 H323Connection * MyH323EndPoint::CreateConnection(unsigned callReference)
@@ -809,7 +812,7 @@ PBoolean MyH323EndPoint::OnStartLogicalChannel(H323Connection & connection, H323
 ///////////////////////////////////////////////////////////////////////////////
 
 MyH323Connection::MyH323Connection(MyH323EndPoint & ep, unsigned callRef)
-  : H323Connection(ep, callRef), endpoint(ep), videoChannelIn(NULL), videoChannelOut(NULL)
+  : H323Connection(ep, callRef), endpoint(ep), videoChannelIn(NULL), videoChannelOut(NULL), m_haveStartedH239(false)
 {
     detectInBandDTMF = FALSE; // turn off in-band DTMF detection (uses a huge amount of CPU)
 }
@@ -860,7 +863,6 @@ void MyH323Connection::OnRTPStatistics(const RTP_Session & session) const
 
 PBoolean MyH323Connection::OpenAudioChannel(PBoolean isEncoding, unsigned bufferSize, H323AudioCodec & codec)
 {
-
   unsigned frameDelay = bufferSize/16; // assume 16 bit PCM
 
   PIndirectChannel * channel;
@@ -967,10 +969,12 @@ PBoolean MyH323Connection::OnInitialFlowRestriction(H323Channel & channel)
     // start the H.239 channel after the other side has sent an OLC for H.239 and received the OLCAck
     if ((channel.GetCapability().GetMainType() == H323Capability::e_Video)
         && (channel.GetCapability().GetSubType() == H245_VideoCapability::e_extendedVideoCapability)
-        && (channel.GetDirection() == H323Channel::IsReceiver)) {
+        && (channel.GetDirection() == H323Channel::IsReceiver)
+        && endpoint.IsStartH239() && !m_haveStartedH239) {
         PTRACE(1, "Starting H.239");
         if (OpenH239Channel()) {
             PTRACE(1, "H.239 channel open");
+            m_haveStartedH239 = true;
         } else {
             PTRACE(1, "H.239 channel failed");
         }
