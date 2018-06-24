@@ -863,7 +863,7 @@ void MyH323Connection::OnRTPStatistics(const RTP_Session & session) const
 
 PBoolean MyH323Connection::OpenAudioChannel(PBoolean isEncoding, unsigned bufferSize, H323AudioCodec & codec)
 {
-  unsigned frameDelay = bufferSize/16; // assume 16 bit PCM
+  unsigned frameDelay = bufferSize / 16; // assume 16 bit PCM
 
   PIndirectChannel * channel;
   if (isEncoding)
@@ -964,13 +964,9 @@ PBoolean MyH323Connection::OpenVideoChannel(PBoolean isEncoding, H323VideoCodec 
 }
 
 #ifdef H323_H239
-PBoolean MyH323Connection::OnInitialFlowRestriction(H323Channel & channel)
+void MyH323Connection::StartH239Transmission()
 {
-    // start the H.239 channel after the other side has sent an OLC for H.239 and received the OLCAck
-    if ((channel.GetCapability().GetMainType() == H323Capability::e_Video)
-        && (channel.GetCapability().GetSubType() == H245_VideoCapability::e_extendedVideoCapability)
-        && (channel.GetDirection() == H323Channel::IsReceiver)
-        && endpoint.IsStartH239() && !m_haveStartedH239) {
+    if (endpoint.IsStartH239() && !m_haveStartedH239) {
         PTRACE(1, "Starting H.239");
         if (OpenH239Channel()) {
             PTRACE(1, "H.239 channel open");
@@ -978,6 +974,29 @@ PBoolean MyH323Connection::OnInitialFlowRestriction(H323Channel & channel)
         } else {
             PTRACE(1, "H.239 channel failed");
         }
+    }
+}
+
+void MyH323Connection::StartH239TransmissionTrigger(PTimer &, H323_INT)
+{
+    m_h239StartTimer.Stop();
+    StartH239Transmission();
+}
+
+void MyH323Connection::OnEstablished()
+{
+    // set a timer to start the H.239 channel if the other side didn't send a H.239 OLC by then
+    m_h239StartTimer.SetInterval(0, 3); // start after 3 sec
+    m_h239StartTimer.SetNotifier(PCREATE_NOTIFIER(StartH239TransmissionTrigger));
+}
+
+PBoolean MyH323Connection::OnInitialFlowRestriction(H323Channel & channel)
+{
+    // start the H.239 channel after the other side has sent an OLC for H.239 and received the OLCAck
+    if ((channel.GetCapability().GetMainType() == H323Capability::e_Video)
+        && (channel.GetCapability().GetSubType() == H245_VideoCapability::e_extendedVideoCapability)
+        && (channel.GetDirection() == H323Channel::IsReceiver)) {
+        StartH239Transmission();
     }
     return true;
 }

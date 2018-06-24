@@ -140,6 +140,9 @@ class MyH323Connection : public H323Connection
 #ifdef H323_VIDEO
     virtual PBoolean OpenVideoChannel(PBoolean isEncoding, H323VideoCodec & codec);
 #ifdef H323_H239
+    void StartH239Transmission();
+    PDECLARE_NOTIFIER(PTimer, MyH323Connection, StartH239TransmissionTrigger);
+    virtual void OnEstablished();
     virtual PBoolean OnInitialFlowRestriction(H323Channel & channel);
 	virtual PBoolean OpenExtendedVideoChannel(PBoolean isEncoding, H323VideoCodec & codec);
 #endif
@@ -158,6 +161,7 @@ class MyH323Connection : public H323Connection
     PVideoChannel * videoChannelOut;
     map<unsigned, WORD> m_sessionPorts;
     bool m_haveStartedH239;
+    PTimer m_h239StartTimer;
 };
 
 ///////////////////////////////////////////////////////////////////////////////
