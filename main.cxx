@@ -774,6 +774,12 @@ MyH323EndPoint::MyH323EndPoint()
   SetStartH239(false);
 }
 
+PBoolean MyH323EndPoint::SetVideoFrameSize(H323Capability::CapabilityFrameSize frameSize, int frameUnits)
+{
+  m_maxFrameSize = frameSize;
+  return H323EndPoint::SetVideoFrameSize(frameSize, frameUnits);
+}
+
 H323Connection * MyH323EndPoint::CreateConnection(unsigned callReference)
 {
   return new MyH323Connection(*this, callReference);
@@ -916,14 +922,22 @@ PBoolean MyH323Connection::OpenVideoChannel(PBoolean isEncoding, H323VideoCodec 
       cap.SetColourFormat("YUV420P");
       cap.SetFrameRate(endpoint.GetFrameRate());
       // sizes must be from largest to smallest
-      cap.SetFrameSize(1920, 1080);
-      caps.framesizes.push_back(cap);
-      cap.SetFrameSize(1280, 720);
-      caps.framesizes.push_back(cap);
-      cap.SetFrameSize(704, 576);
-      caps.framesizes.push_back(cap);
-      cap.SetFrameSize(640, 400);
-      caps.framesizes.push_back(cap);
+      if (endpoint.GetMaxFrameSize() >= H323Capability::i1080MPI) {
+        cap.SetFrameSize(1920, 1080);
+        caps.framesizes.push_back(cap);
+      }
+      if (endpoint.GetMaxFrameSize() >= H323Capability::p720MPI) {
+        cap.SetFrameSize(1280, 720);
+        caps.framesizes.push_back(cap);
+      }
+      if (endpoint.GetMaxFrameSize() >= H323Capability::cif4MPI) {
+        cap.SetFrameSize(704, 576);
+        caps.framesizes.push_back(cap);
+      }
+      if (endpoint.GetMaxFrameSize() >= H323Capability::i480MPI) {
+        cap.SetFrameSize(640, 400);
+        caps.framesizes.push_back(cap);
+      }
       cap.SetFrameSize(352, 288);
       caps.framesizes.push_back(cap);
       codec.SetSupportedFormats(caps.framesizes);

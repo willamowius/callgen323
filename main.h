@@ -183,7 +183,9 @@ class MyH323EndPoint : public H323EndPoint
       H323Connection & connection,    /// Connection that was established
       const PString & token           /// Token for identifying connection
     );
-    PBoolean OnStartLogicalChannel(H323Connection & connection, H323Channel & PTRACE_channel);
+    virtual PBoolean OnStartLogicalChannel(H323Connection & connection, H323Channel & PTRACE_channel);
+    virtual PBoolean SetVideoFrameSize(H323Capability::CapabilityFrameSize frameSize, int frameUnits = 1);
+    virtual H323Capability::CapabilityFrameSize GetMaxFrameSize() const { return m_maxFrameSize; }
 
     // TODO: include in codec negotiations, only sets bearer capabilities right now
     void SetPerCallBandwidth(unsigned bw) { m_rateMultiplier = ceil((float)bw / 64); }
@@ -211,6 +213,7 @@ class MyH323EndPoint : public H323EndPoint
     BYTE m_rateMultiplier;
     PString m_videoPattern;
     unsigned m_frameRate;
+    H323Capability::CapabilityFrameSize m_maxFrameSize;
     bool m_fuzzing;
     unsigned m_percentBadRTPHeader;
     unsigned m_percentBadRTPMedia;
