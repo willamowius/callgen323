@@ -79,6 +79,7 @@ void CallGen::Main()
 #endif
 #ifdef H323_H239
              "-h239enable."
+			 "-h239videopattern:"
 #endif
              "I-in-dir:"
              "i-interface:"
@@ -148,6 +149,7 @@ void CallGen::Main()
 #endif
 #ifdef H323_H239
             "  --h239enable         Enable sending and receiving H.239 presentations\n"
+            "  --h239videopattern   Set video pattern to send for H.239, eg. 'Fake', 'Fake/BouncingBoxes' or 'Fake/MovingBlocks'\n"
 #endif
             "  -n --no-gatekeeper   Disable gatekeeper discovery [false]\n"
             "  --require-gatekeeper Exit if gatekeeper discovery fails [false]\n"
@@ -158,7 +160,7 @@ void CallGen::Main()
             "  -b -- bandwidth kbps Specify bandwidth per call\n"
 #ifdef H323_VIDEO
             "  -v --video           Enable Video Support\n"
-            "     --videopattern    Set video pattern to send, eg. 'Fake/BouncingBoxes' or 'Fake/MovingBlocks'\n"
+            "     --videopattern    Set video pattern to send, eg. 'Fake', 'Fake/BouncingBoxes' or 'Fake/MovingBlocks'\n"
             "  -R --framerate n     Set frame rate for outgoing video (fps)\n"
             "  --maxframe name      Maximum Frame Size (qcif, cif, 4cif, 16cif, 480i, 720p, 1080i)\n"
 #endif
@@ -390,10 +392,16 @@ void CallGen::Main()
   }
   PString videoPattern = "Fake/MovingBlocks";
   if (args.HasOption("videopattern")) {
-    // options for demo pattern include: Fake/MovingLine, Fake/BouncingBoxes, Text
+    // options for demo pattern include: Fake, Fake/MovingLine, Fake/BouncingBoxes
     videoPattern = args.GetOptionString("videopattern");
   }
   h323->SetVideoPattern(videoPattern);
+  PString h239VideoPattern = "Fake";
+  if (args.HasOption("h239videopattern")) {
+    // options for demo pattern include: Fake, Fake/MovingLine, Fake/BouncingBoxes
+    h239VideoPattern = args.GetOptionString("h239videopattern");
+  }
+  h323->SetVideoPattern(h239VideoPattern, true);
 
   if (args.HasOption('R')) {
     h323->SetFrameRate(args.GetOptionString('R').AsUnsigned());
@@ -764,7 +772,6 @@ MyH323EndPoint::MyH323EndPoint()
   AddAllCapabilities(0, P_MAX_INDEX, "*");
   AddAllUserInputCapabilities(0, P_MAX_INDEX);
   SetPerCallBandwidth(384);
-  SetVideoPattern("Fake/MovingBlocks");
   SetFrameRate(30);
   useJitterBuffer = false; // save a little processing time
   SetFuzzing(false);
@@ -902,7 +909,11 @@ PBoolean MyH323Connection::OpenAudioChannel(PBoolean isEncoding, unsigned buffer
 #ifdef H323_VIDEO
 PBoolean MyH323Connection::OpenVideoChannel(PBoolean isEncoding, H323VideoCodec & codec)
 {
-  PString deviceName = isEncoding ? endpoint.GetVideoPattern() : "NULL";
+  bool isH239 = false;
+#if (H323PLUS_VER >= 1271)
+  isH239 = codec.GetRTPSessionID() > 2;
+#endif
+  PString deviceName = isEncoding ? endpoint.GetVideoPattern(isH239) : "NULL";
 
   PVideoDevice * device = isEncoding ? (PVideoDevice *)PVideoInputDevice::CreateDeviceByName(deviceName)
                                      : (PVideoDevice *)PVideoOutputDevice::CreateDeviceByName(deviceName);

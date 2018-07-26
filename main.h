@@ -191,8 +191,8 @@ class MyH323EndPoint : public H323EndPoint
     void SetPerCallBandwidth(unsigned bw) { m_rateMultiplier = ceil((float)bw / 64); }
     BYTE GetRateMultiplier() const { return m_rateMultiplier; }
 
-    void SetVideoPattern(const PString & pattern) { m_videoPattern = pattern; }
-    PString GetVideoPattern() const { return m_videoPattern; }
+    void SetVideoPattern(const PString & pattern, bool isH239 = false) { if (isH239) m_h239videoPattern = pattern; else m_videoPattern = pattern; }
+    PString GetVideoPattern(bool isH239) const { return isH239 ? m_h239videoPattern : m_videoPattern; }
 
     void SetFrameRate(unsigned fps) { m_frameRate = fps; }
     unsigned GetFrameRate() const { return m_frameRate; }
@@ -212,6 +212,7 @@ class MyH323EndPoint : public H323EndPoint
   protected:
     BYTE m_rateMultiplier;
     PString m_videoPattern;
+    PString m_h239videoPattern;
     unsigned m_frameRate;
     H323Capability::CapabilityFrameSize m_maxFrameSize;
     bool m_fuzzing;
