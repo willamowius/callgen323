@@ -26,12 +26,8 @@
 			<Add option="-Wall" />
 		</Compiler>
 		<Unit filename="Makefile" />
-		<Unit filename="main.cxx">
-			<Option target="&lt;{~None~}&gt;" />
-		</Unit>
-		<Unit filename="main.h">
-			<Option target="&lt;{~None~}&gt;" />
-		</Unit>
+		<Unit filename="main.cxx" />
+		<Unit filename="main.h" />
 		<Unit filename="version.h" />
 		<Extensions>
 			<code_completion />
