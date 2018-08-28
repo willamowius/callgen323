@@ -30,6 +30,8 @@
 
 #include <ptclib/random.h>
 #include <ptlib/video.h>
+#include <h323neg.h>
+
 #ifndef _WIN32
 #include <signal.h>
 #endif
@@ -768,12 +770,13 @@ MyH323EndPoint::MyH323EndPoint()
   // load plugins for H.460.17, .18 etc.
   LoadBaseFeatureSet();
 
-  // Set capability
+  useJitterBuffer = false; // save a little processing time
+
   AddAllCapabilities(0, P_MAX_INDEX, "*");
   AddAllUserInputCapabilities(0, P_MAX_INDEX);
   SetPerCallBandwidth(384);
   SetFrameRate(30);
-  useJitterBuffer = false; // save a little processing time
+  SetVideoFrameSize(H323Capability::i1080MPI);
   SetFuzzing(false);
   SetPercentBadRTPHeader(50);
   SetPercentBadRTPMedia(0);
