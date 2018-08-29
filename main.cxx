@@ -776,7 +776,7 @@ MyH323EndPoint::MyH323EndPoint()
   AddAllUserInputCapabilities(0, P_MAX_INDEX);
   SetPerCallBandwidth(384);
   SetFrameRate(30);
-  SetVideoFrameSize(H323Capability::i1080MPI);
+  m_maxFrameSize = H323Capability::i1080MPI;
   SetFuzzing(false);
   SetPercentBadRTPHeader(50);
   SetPercentBadRTPMedia(0);
