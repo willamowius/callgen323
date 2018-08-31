@@ -771,6 +771,9 @@ MyH323EndPoint::MyH323EndPoint()
   LoadBaseFeatureSet();
 
   useJitterBuffer = false; // save a little processing time
+#ifdef H323_H239
+  autoStartTransmitExtVideo = true;
+#endif
 
   AddAllCapabilities(0, P_MAX_INDEX, "*");
   AddAllUserInputCapabilities(0, P_MAX_INDEX);
