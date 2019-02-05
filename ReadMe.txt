@@ -1,15 +1,12 @@
 H.323 Call Generator
+====================
 
-v 2.1.0, Nov 2017
-=================
+This call generator allows you to do load testing of H.323 endpoints,
+gateways and gatekeepers.
 
-What you can do with this call generator: 
- - spawning an exact number of calls. 
- - receiving an exact number of calls. 
- - adjust the delay between each batch of calls. 
- - set the number of batches to repeat. 
- - The capability supported are G.711 ULaw 64k, user
-   indication and plugin video codecs.
+It supports audio, video and H.239. It also supports H.235 AES media encoding
+and RTP fuzzing to test the codecs.
+
 
 HOW TO GET
 ==========
@@ -18,128 +15,133 @@ https://github.com/willamowius/callgen323
 
 HOW TO COMPILE
 ==============
-  In Win32 platform
-  - Follow the instructions on how to build H323Plus.
-  - When changing active build configuration, make sure you specify
-    the correct H323Plus library directory in Tools/Options.
-  - You are on your own now.
 
-  In Linux platform:
-  - Follow the instructions on how to build openh323/voxilla.
-  - Unpack the callgen distribution under the openh323 directory. 
-    Example: 
-      $ cd ~/h323plus
-      $ tar -xzf callgen323.tar.gz
-  - Run make in the callgen323 directory:
-     $ cd callgen323
-     $ make optnoshared
-  - Run the executable to get the runtime options.
-  - You're on your own now.
+On Linux, *BSD, Solaris or macOS X:
+
+Install gcc, OpenSSL dev package and all libraries that might be needed to compile H323Plus video codecs.
+
+Get and compile PTLib:
+
+cd ~
+git clone https://github.com/willamowius/ptlib.git
+cd ptlib
+export PTLIBDIR=~/ptlib
+./configure --enable-ipv6 --disable-odbc --disable-sdl --disable-lua --disable-expat
+make optnoshared
+
+Get and compile H323Plus:
+
+cd ~
+git clone https://github.com/willamowius/h323plus.git
+cd h323plus
+export OPENH323DIR=~/h323plus
+./configure --enable-h235 -enable-h46017 --enable-h46019m
+make optnoshared
+
+Get and compile callgen323:
+
+cd ~
+git clone https://github.com/willamowius/callgen323.git
+cd callgen323
+make optnoshared
+
+Once the compile is finished, the binary can be found as
+
+~/gnugk/obj_linux_x86_64_s/callgen323
+
+(assuming you use a 64bit Linux system).
 
 
 HOW TO RUN
 ==========
-In normal circumstances, you need to run two instances of callgen,
-one to receive the calls (passive), and another to make the
-calls (active). For both instances, usually you need to specify
-the same number of calls that you want to receive/make with -n option.
 
-Example:
-in host 1, run:
-  callgen -m 5 -n -l
-meaning: start in passive mode with 5 number of lines/calls to receive.
+Every call has 2 sides: The dialing side and the side answering the call.
+Callgen323 can act as either side (or both if you start 2 instances).
 
-in host 2, run:
-  callgen -m 5 host1
-meaning: make 5 calls to host1
+If you want to test a H.323 endpoint, you can let it wait for calls and
+have callgen323 call it or you can start callgen323 in listening mode (-l) and
+let the endpoint dial out to it.
+
+if you want to test a gatekeeper or gateway, you would start one instance
+of callgen323 in listening mode and one in dialing mode.
+
+By default calls are made audio-only. Use command lines switches to enable video and H.239.
+
+Examples
+--------
+
+Start in listening mode (no gatekeeper) and allow it to receive a maximum of 5 concurrent calls:
+  callgen323 -n -m 5 -l
+
+Start in dialing mode, 5 concurrent calls, dialing IP 1.2.3.4
+  callgen -n -m 5 1.2.4
+
+Start in dialing mode, register to a gatekeeper using H.460.18 and H.460.19 RTP multiplexing,
+enable H.264 video and sending of H.239:
+  PWLIBPLUGINDIR=/usr/local/lib/pwlib
+  callgen323 -g 192.168.1.189 --h46018enable --h46019multiplexenable -b 768 -v -P H.264 --h239enable -m 10 -r 1 1.2.3.4
+
+Make sure you have compiled and installed the H323Plus H.264 video codec in /usr/local/lib/pwlib before you do this.
+
 
 You can run both instances in a single host if you want, as long as
 you have two IP interfaces on your host. All you need to do is to
-specify different IP interface to listen for each callgen (with
+specify different IP or port to listen for each callgen (with
 the -i option).
 
 Audio files for OGM messages must be 16bit Microsoft PCM files
-in WAV format at 8000 Hz.
+in WAV format at 8000 Hz (like the supplied ogm.wav).
 
 
 COMMAND LINE OPTIONS (SELECTED)
 ===============================
--h
-   Show usage with all command line options
--g <host>
-   Manually specifies the host/address of the gatekeeper.
--i <IP addr>
-   Specifies the IP interface to which the callgen will bind its
-   listener.
--l
-   Start in passive mode. Set this option for the receiving/callee
-   callgen.
--m <number>
-   Number of calls/lines. For receiving callgen, this specifies the
-   maximum number of calls it can receive simultaneously. For the
-   calling callgen, this specifies the number of calls that the
-   callgen must make simultaneously.
--n
-   Doesn't require to register with gatekeeper. Means that if the
-   gatekeeper registration fails, the callgen will still continue
-   its execution.
--r <number>
-   Number of batches to repeat. A batch is one sequence of making
-   calls and hanging up calls.
--u <username>
-   Specifies local username to assign to the callgen.
+  -h                   Show usage with all command line options
+  -l                   Passive/listening mode
+  -m --max num         Maximum number of simultaneous calls
+  -r --repeat num      Repeat calls n times
+  -C --cycle           Each simultaneous call cycles through destination list
+  -t --trace           Trace enable (use multiple times for more detail)
+  -o --output file     Specify filename for trace output [stdout]
+  -i --interface addr  Specify IP address and port listen on [*:1720]
+  -g --gatekeeper host Specify gatekeeper host [auto-discover]
+     --mediaenc        Enable Media encryption (value max cipher 128, 192 or 256)
+     --maxtoken        Set max token size for H.235.6 (1024, 2048, 4096, ...)
+  -k --h46017          Use H.460.17 Gatekeeper
+  --h46018enable       Enable H.460.18/.19
+  --h46019multiplexenable  Enable H.460.19 RTP multiplexing
+  --h46023enable       Enable H.460.23/.24
+  --h239enable         Enable sending and receiving H.239 presentations
+  --h239videopattern   Set video pattern to send for H.239, eg. 'Fake', 'Fake/BouncingBoxes' or 'Fake/MovingBlocks'
+  -n --no-gatekeeper   Disable gatekeeper discovery [false]
+  --require-gatekeeper Exit if gatekeeper discovery fails [false]
+  -u --user username   Specify local username [login name]
+  -p --password pwd    Specify gatekeeper H.235 password [none]
+  -P --prefer codec    Set codec preference (use multiple times) [none]
+  -D --disable codec   Disable codec (use multiple times) [none]
+  -b -- bandwidth kbps Specify bandwidth per call
+  -v --video           Enable Video Support
+     --videopattern    Set video pattern to send, eg. 'Fake', 'Fake/BouncingBoxes' or 'Fake/MovingBlocks'
+  -R --framerate n     Set frame rate for outgoing video (fps)
+  --maxframe name      Maximum Frame Size (qcif, cif, 4cif, 16cif, 480i, 720p, 1080i)
+  -f --fast-disable    Disable fast start
+  -T --h245tunneldisable  Disable H245 tunneling
+  -O --out-msg file    Specify PCM16 WAV file for outgoing message [ogm.wav]
+  -I --in-dir dir      Specify directory for incoming WAV files [disabled]
+  -c --cdr file        Specify Call Detail Record file [none]
+  --tcp-base port      Specific the base TCP port to use
+  --tcp-max port       Specific the maximum TCP port to use
+  --udp-base port      Specific the base UDP port to use
+  --udp-max port       Specific the maximum UDP port to use
+  --rtp-base port      Specific the base RTP/RTCP pair of UDP port to use
+  --rtp-max port       Specific the maximum RTP/RTCP pair of UDP port to use
+  --tmaxest  secs      Maximum time to wait for "Established" [0]
+  --tmincall secs      Minimum call duration in seconds [10]
+  --tmaxcall secs      Maximum call duration in seconds [30]
+  --tminwait secs      Minimum interval between calls in seconds [10]
+  --tmaxwait secs      Maximum interval between calls in seconds [30]
+  --fuzzing            Enable RTP fuzzing
+  --fuzz-header        Percentage of RTP header to randomly overwrite [50]
+  --fuzz-media         Percentage of RTP media to randomly overwrite [0]
+  --fuzz-rtcp          Percentage of RTCP to randomly overwrite [5]
 
-
-USING CALLGEN WITH GATEKEEPER IN A SINGLE HOST
-==============================================
-Normally, I use the callgen on a single host on my Linux machine,
-using the IP aliasing. Apart from loopback interface, I'll set up
-two other IP alias:
-
-# ifconfig lo:0 192.1.4.1
-# ifconfig lo:1 192.1.4.2
-
-Then I run the GK on IP address 127.0.0.1:
-
-# ./gk -h 127.0.0.1
-
-Then I run the callee callgen on one of the IP alias, and assign it
-with a username:
-
-# ./callgen -i 192.1.4.1 -u foo -g 127.0.0.1 -l
-
-Then I run the caller callgen on the other IP alias, assign it with
-other username, and specify username and host of the callee callgen:
-
-# ./callgen -i 192.1.4.2 -u bar -g 127.0.0.1 foo@192.1.4.1
-
-
-
-CHANGELOG
-=========
-[Nov 2017] Version 2.1.0
-- support H.460.x
-- bug fixes
-
-[26 Jan 2000] Version 0.1.3
-- Compatibility with openh323 v1 alpha2
-- Fix gatekeeper functionality.
-- Added options to set username, interface, and various delay.
-
-[31 Oct 99] Version 0.1.2
-- It will now register to gatekeeper (hopefully)
-- Drop the STL thingy (list, string) and assert(). It should be more
-  compatible to openh323. Also cleanup some warnings with Level 4
-  Warning in MSVC, it should compile cleaner now.
-
-[24 Oct 99] Version 0.1.1
-- Linux compatibility. Thanks to Jan Willamowius.
-
-[22 Oct 99]
-- With openh323-0.9alpha2, expect it to have crashes and memory 
-  leaks between call batches. 
-
-
-Benny LP
-seventhson@theseventhson.freeserve.co.uk
 
