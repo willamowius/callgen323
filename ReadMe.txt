@@ -7,10 +7,10 @@ gateways and gatekeepers.
 It supports audio, video and H.239. It also supports H.235 AES media encoding
 and RTP fuzzing to test the codecs.
 
+License: MPL
 
-HOW TO GET
-==========
-https://github.com/willamowius/callgen323
+Repository: https://github.com/willamowius/callgen323
+Support:    https://www.willamowius.com/h323plus-support.html
 
 
 HOW TO COMPILE
@@ -91,6 +91,16 @@ the -i option).
 
 Audio files for OGM messages must be 16bit Microsoft PCM files
 in WAV format at 8000 Hz (like the supplied ogm.wav).
+
+
+Limitations
+-----------
+
+The libraries use select() calls and thus callgen323 is limited to handling 1024 sockets.
+Without RTP multiplexing, this amounts to roughly 250 concurrent audio calls, 150 video calls
+or 100 video calls with H.239 that one instance of callgen323 can handle.
+
+To overcome this limit, you can start multiple instances of callgen323 on the same machine.
 
 
 COMMAND LINE OPTIONS (SELECTED)
