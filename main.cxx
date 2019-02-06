@@ -1007,6 +1007,7 @@ void MyH323Connection::StartH239TransmissionTrigger(PTimer &, H323_INT)
 
 void MyH323Connection::OnEstablished()
 {
+    H323Connection::OnEstablished(); // call super class, so endpoint method OnConnectionEstablished() runs, too
     // set a timer to start the H.239 channel if the other side didn't send a H.239 OLC by then
     m_h239StartTimer.SetInterval(0, 3); // start after 3 sec
     m_h239StartTimer.SetNotifier(PCREATE_NOTIFIER(StartH239TransmissionTrigger));
