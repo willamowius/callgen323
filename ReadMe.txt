@@ -16,7 +16,7 @@ Support:    https://www.willamowius.com/h323plus-support.html
 HOW TO COMPILE
 ==============
 
-On Linux, *BSD, Solaris or macOS X:
+On Linux, *BSD, Solaris or MacOS X:
 
 Install gcc, OpenSSL dev package and all libraries that might be needed to compile H323Plus video codecs.
 
@@ -27,7 +27,7 @@ git clone https://github.com/willamowius/ptlib.git
 cd ptlib
 export PTLIBDIR=~/ptlib
 ./configure --enable-ipv6 --disable-odbc --disable-sdl --disable-lua --disable-expat
-make optnoshared
+make debugnoshared
 
 Get and compile H323Plus:
 
@@ -36,18 +36,18 @@ git clone https://github.com/willamowius/h323plus.git
 cd h323plus
 export OPENH323DIR=~/h323plus
 ./configure --enable-h235 -enable-h46017 --enable-h46019m
-make optnoshared
+make debugnoshared
 
 Get and compile callgen323:
 
 cd ~
 git clone https://github.com/willamowius/callgen323.git
 cd callgen323
-make optnoshared
+make debugnoshared
 
 Once the compile is finished, the binary can be found as
 
-~/gnugk/obj_linux_x86_64_s/callgen323
+~/gnugk/obj_linux_x86_64_d_s/callgen323
 
 (assuming you use a 64bit Linux system).
 
@@ -96,11 +96,13 @@ in WAV format at 8000 Hz (like the supplied ogm.wav).
 Limitations
 -----------
 
-The libraries use select() calls and thus callgen323 is limited to handling 1024 sockets.
-Without RTP multiplexing, this amounts to roughly 250 concurrent audio calls, 150 video calls
-or 100 video calls with H.239 that one instance of callgen323 can handle.
+Establishing lots of calls uses lots of resources. Make sure the process get enough resources.
+On Linux set
 
-To overcome this limit, you can start multiple instances of callgen323 on the same machine.
+ulimit -n 10240
+ulimit -s unlimited
+
+You can also start multiple instances of callgen323 to produce more calls.
 
 
 COMMAND LINE OPTIONS (SELECTED)
