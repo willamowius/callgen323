@@ -135,6 +135,12 @@ COMMAND LINE OPTIONS (SELECTED)
      --videopattern    Set video pattern to send, eg. 'Fake', 'Fake/BouncingBoxes' or 'Fake/MovingBlocks'
   -R --framerate n     Set frame rate for outgoing video (fps)
   --maxframe name      Maximum Frame Size (qcif, cif, 4cif, 16cif, 480i, 720p, 1080i)
+  --tls                TLS Enabled (must be set for TLS).
+  --tls-cafile         TLS Certificate Authority File.
+  --tls-cert           TLS Certificate File.
+  --tls-privkey        TLS Private Key File.
+  --tls-passphrase     TLS Private Key PassPhrase.
+  --tls-listenport     TLS listen port (default: 1300).
   -f --fast-disable    Disable fast start
   -T --h245tunneldisable  Disable H245 tunneling
   -O --out-msg file    Specify PCM16 WAV file for outgoing message [ogm.wav]
