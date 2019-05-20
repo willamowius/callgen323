@@ -102,6 +102,14 @@ void CallGen::Main()
 			 "R-framerate:"
 			 "-maxframe:"
 #endif
+#ifdef H323_TLS
+             "-tls."
+             "-tls-cafile:"
+             "-tls-cert:"
+             "-tls-privkey:"
+             "-tls-passphrase:"
+             "-tls-listenport:"
+#endif
              "-tmaxest:"
              "-tmincall:"
              "-tmaxcall:"
@@ -165,6 +173,14 @@ void CallGen::Main()
             "     --videopattern    Set video pattern to send, eg. 'Fake', 'Fake/BouncingBoxes' or 'Fake/MovingBlocks'\n"
             "  -R --framerate n     Set frame rate for outgoing video (fps)\n"
             "  --maxframe name      Maximum Frame Size (qcif, cif, 4cif, 16cif, 480i, 720p, 1080i)\n"
+#endif
+#ifdef H323_TLS
+            "  --tls                TLS Enabled (must be set for TLS).\n"
+            "  --tls-cafile         TLS Certificate Authority File.\n"
+            "  --tls-cert           TLS Certificate File.\n"
+            "  --tls-privkey        TLS Private Key File.\n"
+            "  --tls-passphrase     TLS Private Key PassPhrase.\n"
+            "  --tls-listenport     TLS listen port (default: 1300).\n"
 #endif
             "  -f --fast-disable    Disable fast start\n"
             "  -T --h245tunneldisable  Disable H245 tunneling\n"
@@ -302,6 +318,30 @@ void CallGen::Main()
     h323->SetGatekeeperPassword(args.GetOptionString('p'));
     cout << "Using H.235 security." << endl;
   }
+
+#ifdef H323_TLS   // Initialize TLS
+    bool useTLS = args.HasOption("tls");
+    if (useTLS) {
+        h323->DisableH245Tunneling(false);  // Tunneling must be used with TLS
+        if (args.HasOption("tls-cafile"))
+        useTLS = h323->TLS_SetCAFile(args.GetOptionString("tls-cafile"));
+        if (useTLS && args.HasOption("tls-cert"))
+            useTLS = h323->TLS_SetCertificate(args.GetOptionString("tls-cert"));
+        if (useTLS && args.HasOption("tls-privkey")) {
+            PString passphrase = PString();
+            if (args.HasOption("tls-passphrase"))
+                passphrase = args.GetOptionString("tls-passphrase");
+            useTLS = h323->TLS_SetPrivateKey(args.GetOptionString("tls-privkey"), passphrase);
+        }
+        WORD tlsListenPort = (WORD)args.GetOptionString("tls-listenport", "1300").AsUnsigned();
+
+        if (useTLS && h323->TLS_Initialise(interfaceAddress, tlsListenPort)) {
+            cout << "Enabled TLS signal security." << endl;
+        } else {
+            cerr << "Could not enable TLS signal security." << endl;
+        }
+    }
+#endif
 
   if (args.HasOption('a')) {
     h323->SetGkAccessTokenOID(args.GetOptionString('a'));
