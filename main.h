@@ -141,7 +141,9 @@ class MyH323Connection : public H323Connection
     virtual PBoolean OpenVideoChannel(PBoolean isEncoding, H323VideoCodec & codec);
 #ifdef H323_H239
     void StartH239Transmission();
+    void StopH239Transmission();
     PDECLARE_NOTIFIER(PTimer, MyH323Connection, StartH239TransmissionTrigger);
+    PDECLARE_NOTIFIER(PTimer, MyH323Connection, StopH239TransmissionTrigger);
     virtual void OnEstablished();
     virtual PBoolean OnInitialFlowRestriction(H323Channel & channel);
 	virtual PBoolean OpenExtendedVideoChannel(PBoolean isEncoding, H323VideoCodec & codec);
@@ -160,8 +162,10 @@ class MyH323Connection : public H323Connection
     PVideoChannel * videoChannelIn;
     PVideoChannel * videoChannelOut;
     map<unsigned, WORD> m_sessionPorts;
+    bool m_isH239ready;
     bool m_haveStartedH239;
     PTimer m_h239StartTimer;
+    PTimer m_h239StopTimer;
 };
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -209,6 +213,11 @@ class MyH323EndPoint : public H323EndPoint
     void SetStartH239(bool start) { m_startH239 = start; }
     bool IsStartH239() const { return m_startH239; }
 
+    void SetH239Delay (int delay) { m_h239delay = delay; }
+    int GetH239Delay () { return m_h239delay; }
+    void SetH239Duration (int duration) { m_h239duration = duration; }
+    int GetH239Duration () { return m_h239duration; }
+
   protected:
     BYTE m_rateMultiplier;
     PString m_videoPattern;
@@ -220,6 +229,8 @@ class MyH323EndPoint : public H323EndPoint
     unsigned m_percentBadRTPMedia;
     unsigned m_percentBadRTCP;
     bool m_startH239;
+    int m_h239delay;
+    int m_h239duration;
 };
 
 ///////////////////////////////////////////////////////////////////////////////

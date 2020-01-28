@@ -81,7 +81,9 @@ void CallGen::Main()
 #endif
 #ifdef H323_H239
              "-h239enable."
-			 "-h239videopattern:"
+             "-h239videopattern:"
+             "-h239delay:"
+             "-h239duration:"
 #endif
              "I-in-dir:"
              "i-interface:"
@@ -160,6 +162,8 @@ void CallGen::Main()
 #ifdef H323_H239
             "  --h239enable         Enable sending and receiving H.239 presentations\n"
             "  --h239videopattern   Set video pattern to send for H.239, eg. 'Fake', 'Fake/BouncingBoxes' or 'Fake/MovingBlocks'\n"
+            "  --h239delay          Delay the start of the H.239 transmission in seconds [1 sec]\n"
+            "  --h239duration       Duration the H.239 transmission in seconds [-1 - unlimited]\n"
 #endif
             "  -n --no-gatekeeper   Disable gatekeeper discovery [false]\n"
             "  --require-gatekeeper Exit if gatekeeper discovery fails [false]\n"
@@ -293,11 +297,18 @@ void CallGen::Main()
 
 #ifdef H323_H239
   if (args.HasOption("h239enable")) {
-    cout << "Enabeling H.239" << endl;
-    if (!args.HasOption('l'))
+    cout << "Enabling H.239" << endl;
+    if (!args.HasOption('l')) {
         h323->SetStartH239(true);   // only the calling call generator starts a H.239 channel
+
+        int delay = (args.HasOption("h239delay")) ? args.GetOptionString("h239delay").AsInteger() : 1;
+        h323->SetH239Delay(delay);
+
+        int duration = (args.HasOption("h239duration")) ? args.GetOptionString("h239duration").AsInteger() : -1;
+        h323->SetH239Duration(duration);
+    }
   } else {
-    cout << "Disabeling H.239" << endl;
+    cout << "Disabling H.239" << endl;
     h323->RemoveCapabilities(PStringArray("H.239"));
   }
 #endif
@@ -878,7 +889,12 @@ PBoolean MyH323EndPoint::OnStartLogicalChannel(H323Connection & connection, H323
 ///////////////////////////////////////////////////////////////////////////////
 
 MyH323Connection::MyH323Connection(MyH323EndPoint & ep, unsigned callRef)
-  : H323Connection(ep, callRef), endpoint(ep), videoChannelIn(NULL), videoChannelOut(NULL), m_haveStartedH239(false)
+  : H323Connection(ep, callRef)
+  , endpoint(ep)
+  , videoChannelIn(NULL)
+  , videoChannelOut(NULL)
+  , m_isH239ready(false)
+  , m_haveStartedH239(false)
 {
     detectInBandDTMF = FALSE; // turn off in-band DTMF detection (uses a huge amount of CPU)
 }
@@ -1033,24 +1049,47 @@ void MyH323Connection::StartH239Transmission()
         if (OpenH239Channel()) {
             PTRACE(1, "H.239 channel open");
             m_haveStartedH239 = true;
+            int duration = endpoint.GetH239Duration();
+            if (duration > 0) {
+                m_h239StopTimer.SetInterval(0, duration); // stop H239 transmission after 10 sec
+                m_h239StopTimer.SetNotifier(PCREATE_NOTIFIER(StopH239TransmissionTrigger));
+            }
         } else {
             PTRACE(1, "H.239 channel failed");
         }
     }
 }
 
+void MyH323Connection::StopH239Transmission()
+{
+  if (endpoint.IsStartH239()) {
+    PTRACE(1, "Stopping H.239");
+    CloseH239Channel();
+  }
+}
+
 void MyH323Connection::StartH239TransmissionTrigger(PTimer &, H323_INT)
 {
     m_h239StartTimer.Stop();
-    StartH239Transmission();
+    if (m_isH239ready) {
+      StartH239Transmission();
+    }
+}
+
+void MyH323Connection::StopH239TransmissionTrigger(PTimer &, H323_INT)
+{
+    StopH239Transmission();
 }
 
 void MyH323Connection::OnEstablished()
 {
     H323Connection::OnEstablished(); // call super class, so endpoint method OnConnectionEstablished() runs, too
     // set a timer to start the H.239 channel if the other side didn't send a H.239 OLC by then
-    m_h239StartTimer.SetInterval(0, 3); // start after 3 sec
-    m_h239StartTimer.SetNotifier(PCREATE_NOTIFIER(StartH239TransmissionTrigger));
+    if (endpoint.IsStartH239()) {
+      int delay = endpoint.GetH239Delay();
+      m_h239StartTimer.SetInterval(0, delay); // start after 'delay' sec
+      m_h239StartTimer.SetNotifier(PCREATE_NOTIFIER(StartH239TransmissionTrigger));
+    }
 }
 
 PBoolean MyH323Connection::OnInitialFlowRestriction(H323Channel & channel)
@@ -1059,7 +1098,7 @@ PBoolean MyH323Connection::OnInitialFlowRestriction(H323Channel & channel)
     if ((channel.GetCapability().GetMainType() == H323Capability::e_Video)
         && (channel.GetCapability().GetSubType() == H245_VideoCapability::e_extendedVideoCapability)
         && (channel.GetDirection() == H323Channel::IsReceiver)) {
-        StartH239Transmission();
+      m_isH239ready = true;
     }
     return true;
 }
