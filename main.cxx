@@ -1279,6 +1279,8 @@ PBoolean PlayMessage::Read(void * buf, PINDEX len)
     // just play out silence
     memset(buf, 0, len);
     lastReadCount = len;
+    if (mode != DelayWritesOnly) 
+        Wait(lastReadCount, nextReadTick);  // supress outgoing packets flood
     return TRUE;
   }
 
