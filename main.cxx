@@ -335,7 +335,7 @@ void CallGen::Main()
     if (useTLS) {
         h323->DisableH245Tunneling(false);  // Tunneling must be used with TLS
         if (args.HasOption("tls-cafile"))
-        useTLS = h323->TLS_SetCAFile(args.GetOptionString("tls-cafile"));
+            useTLS = h323->TLS_SetCAFile(args.GetOptionString("tls-cafile"));
         if (useTLS && args.HasOption("tls-cert"))
             useTLS = h323->TLS_SetCertificate(args.GetOptionString("tls-cert"));
         if (useTLS && args.HasOption("tls-privkey")) {
@@ -833,6 +833,8 @@ MyH323EndPoint::MyH323EndPoint()
   SetPercentBadRTPMedia(0);
   SetPercentBadRTCP(5);
   SetStartH239(false);
+  SetH239Delay(1);
+  SetH239Duration(-1);
 }
 
 PBoolean MyH323EndPoint::SetVideoFrameSize(H323Capability::CapabilityFrameSize frameSize, int frameUnits)
@@ -1279,7 +1281,7 @@ PBoolean PlayMessage::Read(void * buf, PINDEX len)
     // just play out silence
     memset(buf, 0, len);
     lastReadCount = len;
-    if (mode != DelayWritesOnly) 
+    if (mode != DelayWritesOnly)
         Wait(lastReadCount, nextReadTick);  // supress outgoing packets flood
     return TRUE;
   }

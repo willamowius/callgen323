@@ -213,10 +213,10 @@ class MyH323EndPoint : public H323EndPoint
     void SetStartH239(bool start) { m_startH239 = start; }
     bool IsStartH239() const { return m_startH239; }
 
-    void SetH239Delay (int delay) { m_h239delay = delay; }
-    int GetH239Delay () { return m_h239delay; }
-    void SetH239Duration (int duration) { m_h239duration = duration; }
-    int GetH239Duration () { return m_h239duration; }
+    void SetH239Delay(int delay) { m_h239delay = delay; }
+    int GetH239Delay() { return m_h239delay; }
+    void SetH239Duration(int duration) { m_h239duration = duration; }
+    int GetH239Duration() { return m_h239duration; }
 
   protected:
     BYTE m_rateMultiplier;
