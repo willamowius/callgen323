@@ -89,6 +89,7 @@ void CallGen::Main()
              "i-interface:"
              "l-listen."
              "m-max:"
+             " -mcu."
              "n-no-gatekeeper."
              "O-out-msg:"
              "o-output:"
@@ -137,6 +138,7 @@ void CallGen::Main()
             "where options:\n"
             "  -l                   Passive/listening mode\n"
             "  -m --max num         Maximum number of simultaneous calls\n"
+            "     --mcu             Pose as MCU (to always win master/slave neg.)\n"
             "  -r --repeat num      Repeat calls n times\n"
             "  -C --cycle           Each simultaneous call cycles through destination list\n"
             "  -t --trace           Trace enable (use multiple times for more detail)\n"
@@ -324,6 +326,12 @@ void CallGen::Main()
       h323->AddAliasName(aliases[i]);
   }
   cout << "Local username: \"" << h323->GetLocalUserName() << '"' << endl;
+
+  if (args.HasOption("mcu")) {
+    h323->SetTerminalType(H323EndPoint::e_MCUWithAVMP); // pose as MCU to always win H.245 master/slave negotiation
+    cout << "Posing as MCU" << endl;
+  }
+
 
   if (args.HasOption('p')) {
     h323->SetGatekeeperPassword(args.GetOptionString('p'));
@@ -988,7 +996,7 @@ PBoolean MyH323Connection::OpenVideoChannel(PBoolean isEncoding, H323VideoCodec 
       } else
 #endif // PTLIB_VER
     {
-      // set fixed list of resolutions for PTLib < 2.11 and for drivers that don't provide a a list
+      // set fixed list of resolutions for PTLib < 2.11 and for drivers that don't provide a list
       PVideoInputDevice::Capabilities caps;
       PVideoFrameInfo cap;
       cap.SetColourFormat("YUV420P");
