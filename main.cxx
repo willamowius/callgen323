@@ -1105,6 +1105,9 @@ void MyH323Connection::OnEstablished()
 PBoolean MyH323Connection::OnInitialFlowRestriction(H323Channel & channel)
 {
     // start the H.239 channel after the other side has sent an OLC for H.239 and received the OLCAck
+    // TODO: this works with Polycom endpoints that open the channel at the beginning, but not with
+    //       Cisco and Radvision endpoints that only open the H.239 channel when needed
+    //       replace with other check if other endpoint supports H.239
     if ((channel.GetCapability().GetMainType() == H323Capability::e_Video)
         && (channel.GetCapability().GetSubType() == H245_VideoCapability::e_extendedVideoCapability)
         && (channel.GetDirection() == H323Channel::IsReceiver)) {
