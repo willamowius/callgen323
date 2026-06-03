@@ -49,6 +49,60 @@ CallGen::CallGen()
   h323 = NULL;
 }
 
+bool SplitAddress(const PString & addr, PString & host, WORD & port)
+{
+    if (addr.IsEmpty())
+        return false;
+
+    PINDEX lastChar = addr.GetLength() - 1;
+    PINDEX colon = addr.FindLast(':');
+
+    // No port separator -> hostname / IPv4
+    if (colon == P_MAX_INDEX) {
+        host = addr(0, lastChar);
+        return true;
+    }
+
+    // Bracketed IPv6
+    if (addr[0] == '[') {
+        PINDEX close = addr.Find(']');
+        if (close == P_MAX_INDEX || close == 1)
+            return false;
+
+        if (close < lastChar) {
+            if (addr[close + 1] != ':' || colon == lastChar)
+                return false;
+
+            unsigned p = addr.Mid(colon + 1, lastChar).AsUnsigned();
+            if (p > 65535)
+                return false;
+
+            port = (WORD)p;
+        }
+
+        host = addr.Mid(1, close - 1);
+        return true;
+    }
+
+    // Single ':' => IPv4/domain with port
+    if (addr.Find(':') == colon) {
+        if (colon == lastChar)
+            return false;
+
+        unsigned p = addr.Mid(colon + 1, lastChar).AsUnsigned();
+        if (p > 65535)
+            return false;
+
+        port = (WORD)p;
+        host = addr.Left(colon);
+        return true;
+    }
+
+    // Raw IPv6
+    host = addr(0, lastChar);
+    return true;
+}
+
 void CallGen::Main()
 {
 #ifndef _WIN32
@@ -257,13 +311,10 @@ void CallGen::Main()
   WORD listenPort = H323EndPoint::DefaultTcpPort;
   if (args.HasOption('i')) {
     PString interface = args.GetOptionString('i');
-    PINDEX colon = interface.Find(":");
-    if (colon != P_MAX_INDEX) {
-      interfaceAddress = interface.Left(colon);
-      listenPort = interface.Mid(colon + 1).AsUnsigned();
-    } else {
-      interfaceAddress = interface;
+    if (!SplitAddress(interface, interface, listenPort)) {
+      cout << "Could not parse param of -i \"" << interface << "\" to ip address and port." << endl;
     }
+    interfaceAddress = interface;
   }
 
   listener = new H323ListenerTCP(*h323, interfaceAddress, listenPort);
