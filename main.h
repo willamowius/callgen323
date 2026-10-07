@@ -115,7 +115,7 @@ struct CallDetail
   void Drop(H323Connection & connection);
 
   void OnRTPStatistics(const RTP_Session & session, const PString & token);
-  void OnRTPFinalStatistics(const RTP_Session & session, const PString & token);
+  void OnRTPFinalStatistics(const RTP_Session & session, const PString & callId);
 };
 
 // ignore received audio
@@ -332,6 +332,7 @@ class CallGen : public PProcess
     PString    outgoingMessageFile;
     PString    incomingAudioDirectory;
     PTextFile  cdrFile;
+    PTextFile  rtpStatsFile;
 
     PSyncPoint threadEnded;
     unsigned   totalAttempts;

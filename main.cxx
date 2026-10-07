@@ -172,6 +172,7 @@ void CallGen::Main()
              "P-prefer:"
              "p-password:"
              "r-repeat:"
+             "-rtp-stats:"
              "-require-gatekeeper."
              "T-h245tunneldisable."
              "t-trace."
@@ -270,6 +271,7 @@ void CallGen::Main()
             "  -O --out-msg file    Specify PCM16 WAV file for outgoing message [ogm.wav]\n"
             "  -I --in-dir dir      Specify directory for incoming WAV files [disabled]\n"
             "  -c --cdr file        Specify Call Detail Record file [none]\n"
+            "     --rtp-stats file  Specify CSV file for RTP statistics at end of each RTP session [none]\n"
             "  --tcp-base port      Specific the base TCP port to use\n"
             "  --tcp-max port       Specific the maximum TCP port to use\n"
             "  --udp-base port      Specific the base UDP port to use\n"
@@ -358,6 +360,17 @@ void CallGen::Main()
     }
     else {
       cout << "Could not open \"" << cdrFile.GetFilePath() << "\"!" << endl;
+    }
+  }
+
+  if (args.HasOption("rtp-stats")) {
+    if (rtpStatsFile.Open(args.GetOptionString("rtp-stats"), PFile::WriteOnly, PFile::Create)) {
+      rtpStatsFile.SetPosition(0, PFile::End);
+      PTRACE(1, "CallGen\tSetting RTP statistics file to \"" << rtpStatsFile.GetFilePath() << '"');
+      cout << "Sending RTP statistics to \"" << rtpStatsFile.GetFilePath() << '"' << endl;
+    }
+    else {
+      cout << "Could not open \"" << rtpStatsFile.GetFilePath() << "\"!" << endl;
     }
   }
 
@@ -928,10 +941,61 @@ void CallDetail::OnRTPStatistics(const RTP_Session & session, const PString & to
   }
 }
 
-void CallDetail::OnRTPFinalStatistics(const RTP_Session & session, const PString & token)
+// called from the RTP_Session destructor, so session is only a RTP_Session here (eg. no cast to RTP_UDP)
+// only use non-virtual getters of RTP_Session members
+// GetPacketsTooLate() is useless here, the jitter buffer has already been deleted
+void CallDetail::OnRTPFinalStatistics(const RTP_Session & session, const PString & callId)
 {
-  // TODO collect end of call stats like packet loss, jitter, etc. and add to CDR
-  cout << "JW Final RTP statistics for session " << session.GetSessionID() << " packets=" << session.GetPacketsReceived() << " packet loss=" << session.GetPacketsLost() << endl;
+  PTextFile & rtpStatsFile = CallGen::Current().rtpStatsFile;
+
+  if (!rtpStatsFile.IsOpen())
+    return;
+
+  static PMutex rtpStatsMutex;
+  PWaitAndSignal lock(rtpStatsMutex);
+
+  if (rtpStatsFile.GetLength() == 0)
+    rtpStatsFile << "Time,"
+                    "Call Id,"
+                    "RTP Session Id,"
+                    "Packets sent,"
+                    "Octets sent,"
+                    "Packets received,"
+                    "Octets received,"
+                    "Packets lost,"
+                    "Packets out of order,"
+                    "Avg send time (ms),"
+                    "Min send time (ms),"
+                    "Max send time (ms),"
+                    "Avg receive time (ms),"
+                    "Min receive time (ms),"
+                    "Max receive time (ms),"
+                    "Avg jitter (ms),"
+                    "Max jitter (ms),"
+                    "First data received\n";
+
+  rtpStatsFile << PTime().AsString("yyyy/M/d hh:mm:ss") << ','
+               << callId << ','
+               << session.GetSessionID() << ','
+               << session.GetPacketsSent() << ','
+               << session.GetOctetsSent() << ','
+               << session.GetPacketsReceived() << ','
+               << session.GetOctetsReceived() << ','
+               << session.GetPacketsLost() << ','
+               << session.GetPacketsOutOfOrder() << ','
+               << session.GetAverageSendTime() << ','
+               << session.GetMinimumSendTime() << ','
+               << session.GetMaximumSendTime() << ','
+               << session.GetAverageReceiveTime() << ','
+               << session.GetMinimumReceiveTime() << ','
+               << session.GetMaximumReceiveTime() << ','
+               << session.GetAvgJitterTime() << ','
+               << session.GetMaxJitterTime() << ',';
+  if (session.GetPacketsReceived() > 0) {
+    PTime firstReceived = session.GetFirstDataReceivedTime();
+    rtpStatsFile << firstReceived.AsString("yyyy/M/d hh:mm:ss.uuu");
+  }
+  rtpStatsFile << endl;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -992,7 +1056,6 @@ void MyH323EndPoint::AdjustVideoCapabilities()
 }
 #endif
 
-// TODO do we need this ??
 PBoolean MyH323EndPoint::OnSetGatewayPrefixes(PStringList & prefixes) const
 {
   if (m_gatewayPrefixes.IsEmpty())
@@ -1076,13 +1139,13 @@ MyH323Connection::~MyH323Connection()
 PBoolean MyH323Connection::OnSendSignalSetup(H323SignalPDU & setupPDU)
 {
     // set outgoing bearer capability to unrestricted information transfer + transfer rate
-	PBYTEArray caps;
-	caps.SetSize(4);
-	caps[0] = 0x88;
-	caps[1] = 0x18;
-	caps[2] = 0x80 | endpoint.GetRateMultiplier();
-	caps[3] = 0xa5;
-	setupPDU.GetQ931().SetIE(Q931::BearerCapabilityIE, caps);
+    PBYTEArray caps;
+    caps.SetSize(4);
+    caps[0] = 0x88;
+    caps[1] = 0x18;
+    caps[2] = 0x80 | endpoint.GetRateMultiplier();
+    caps[3] = 0xa5;
+    setupPDU.GetQ931().SetIE(Q931::BearerCapabilityIE, caps);
 
     return H323Connection::OnSendSignalSetup(setupPDU);
 }
@@ -1113,7 +1176,7 @@ void MyH323Connection::OnRTPStatistics(const RTP_Session & session) const
 
 void MyH323Connection::OnRTPFinalStatistics(const RTP_Session & session) const
 {
-  ((MyH323Connection *)this)->details.OnRTPFinalStatistics(session, GetCallToken());
+  ((MyH323Connection *)this)->details.OnRTPFinalStatistics(session, GetCallIdentifier().AsString());
 }
 
 PBoolean MyH323Connection::OpenAudioChannel(PBoolean isEncoding, unsigned bufferSize, H323AudioCodec & codec)
