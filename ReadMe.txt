@@ -47,7 +47,7 @@ make debugnoshared
 
 Once the compile is finished, the binary can be found as
 
-~/gnugk/obj_linux_x86_64_d_s/callgen323
+~/callgen323/obj_linux_x86_64_d_s/callgen323
 
 (assuming you use a 64bit Linux system).
 
@@ -74,7 +74,7 @@ Start in listening mode (no gatekeeper) and allow it to receive a maximum of 5 c
   callgen323 -n -m 5 -l
 
 Start in dialing mode, 5 concurrent calls, dialing IP 1.2.3.4
-  callgen -n -m 5 1.2.4
+  callgen323 -n -m 5 1.2.3.4
 
 Start in dialing mode, register to a gatekeeper using H.460.18 and H.460.19 RTP multiplexing,
 enable H.264 video and sending of H.239:
@@ -82,6 +82,34 @@ enable H.264 video and sending of H.239:
   callgen323 -g 192.168.1.189 --h46018enable --h46019multiplexenable -b 768 -v -P H.264 --h239enable -m 10 -r 1 1.2.3.4
 
 Make sure you have compiled and installed the H323Plus H.264 video codec in /usr/local/lib/pwlib before you do this.
+
+Start in listening mode, register to a gatekeeper as gateway with prefixes 49 and 0049,
+so the gatekeeper routes calls for these prefixes to callgen323:
+  callgen323 -g 192.168.1.189 --gateway 49,0049 -m 10 -l
+
+Start in dialing mode and write RTP statistics for each call to a CSV file:
+  callgen323 -n -m 5 --rtp-stats rtpstats.csv 1.2.3.4
+
+Without -u, callgen323 registers with a random username (login name plus a random suffix),
+so multiple instances can register to the same gatekeeper without alias conflicts.
+
+Press Ctrl-C to stop callgen323. It will clear all calls and unregister from the
+gatekeeper. Press Ctrl-C a 2nd time to exit immediately if the unregistration hangs.
+
+
+RTP Statistics
+--------------
+
+With --rtp-stats, callgen323 appends one line per RTP session (audio, video, H.239)
+to the given CSV file when the session ends. If the file is empty, a header line is
+written first. Columns:
+
+  Time, Call Id, RTP Session Id, Packets sent, Octets sent, Packets received,
+  Octets received, Packets lost, Packets out of order,
+  Avg/Min/Max send time (ms), Avg/Min/Max receive time (ms),
+  Avg jitter (ms), Max jitter (ms), First data received
+
+The "First data received" column is empty if no packets were received.
 
 
 You can run both instances in a single host if you want, as long as
@@ -110,12 +138,15 @@ COMMAND LINE OPTIONS (SELECTED)
   -h                   Show usage with all command line options
   -l                   Passive/listening mode
   -m --max num         Maximum number of simultaneous calls
+     --mcu             Pose as MCU (to always win master/slave negotiation)
   -r --repeat num      Repeat calls n times
   -C --cycle           Each simultaneous call cycles through destination list
   -t --trace           Trace enable (use multiple times for more detail)
   -o --output file     Specify filename for trace output [stdout]
   -i --interface addr  Specify IP address and port listen on [*:1720]
   -g --gatekeeper host Specify gatekeeper host [auto-discover]
+     --gateway prefix  Register as gateway with prefix (use multiple times or comma separated)
+  -a --access-token-oid oid  Set OID of the gatekeeper access token to use [none]
      --mediaenc        Enable Media encryption (value max cipher 128, 192 or 256)
      --maxtoken        Set max token size for H.235.6 (1024, 2048, 4096, ...)
   -k --h46017          Use H.460.17 Gatekeeper
@@ -124,9 +155,11 @@ COMMAND LINE OPTIONS (SELECTED)
   --h46023enable       Enable H.460.23/.24
   --h239enable         Enable sending and receiving H.239 presentations
   --h239videopattern   Set video pattern to send for H.239, eg. 'Fake', 'Fake/BouncingBoxes' or 'Fake/MovingBlocks'
+  --h239delay          Delay the start of the H.239 transmission in seconds [1 sec]
+  --h239duration       Duration of the H.239 transmission in seconds [-1 = unlimited]
   -n --no-gatekeeper   Disable gatekeeper discovery [false]
   --require-gatekeeper Exit if gatekeeper discovery fails [false]
-  -u --user username   Specify local username [login name]
+  -u --user username   Specify local username [login name plus random suffix]
   -p --password pwd    Specify gatekeeper H.235 password [none]
   -P --prefer codec    Set codec preference (use multiple times) [none]
   -D --disable codec   Disable codec (use multiple times) [none]
@@ -134,7 +167,7 @@ COMMAND LINE OPTIONS (SELECTED)
   -v --video           Enable Video Support
      --videopattern    Set video pattern to send, eg. 'Fake', 'Fake/BouncingBoxes' or 'Fake/MovingBlocks'
   -R --framerate n     Set frame rate for outgoing video (fps)
-  --maxframe name      Maximum Frame Size (qcif, cif, 4cif, 16cif, 480i, 720p, 1080i)
+  --maxframe name      Maximum Frame Size (cif, 4cif, 16cif, 480i, 720p, 1080i)
   --tls                TLS Enabled (must be set for TLS).
   --tls-cafile         TLS Certificate Authority File.
   --tls-cert           TLS Certificate File.
@@ -146,6 +179,7 @@ COMMAND LINE OPTIONS (SELECTED)
   -O --out-msg file    Specify PCM16 WAV file for outgoing message [ogm.wav]
   -I --in-dir dir      Specify directory for incoming WAV files [disabled]
   -c --cdr file        Specify Call Detail Record file [none]
+     --rtp-stats file  Specify CSV file for RTP statistics at end of each RTP session [none]
   --tcp-base port      Specific the base TCP port to use
   --tcp-max port       Specific the maximum TCP port to use
   --udp-base port      Specific the base UDP port to use
