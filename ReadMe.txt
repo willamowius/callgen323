@@ -27,7 +27,7 @@ git clone https://github.com/willamowius/ptlib.git
 cd ptlib
 export PTLIBDIR=~/ptlib
 ./configure --enable-ipv6 --disable-odbc --disable-sdl --disable-lua --disable-expat
-make debugnoshared
+make optnoshared
 
 Get and compile H323Plus:
 
@@ -36,14 +36,14 @@ git clone https://github.com/willamowius/h323plus.git
 cd h323plus
 export OPENH323DIR=~/h323plus
 ./configure --enable-h235 -enable-h46017 --enable-h46019m
-make debugnoshared
+make optnoshared
 
 Get and compile callgen323:
 
 cd ~
 git clone https://github.com/willamowius/callgen323.git
 cd callgen323
-make debugnoshared
+make optnoshared
 
 Once the compile is finished, the binary can be found as
 
@@ -114,7 +114,7 @@ The "First data received" column is empty if no packets were received.
 
 You can run both instances in a single host if you want, as long as
 you have two IP interfaces on your host. All you need to do is to
-specify different IP or port to listen for each callgen (with
+specify different IP or port to listen for each callgen323 (with
 the -i option).
 
 Audio files for OGM messages must be 16bit Microsoft PCM files
@@ -133,8 +133,8 @@ ulimit -s unlimited
 You can also start multiple instances of callgen323 to produce more calls.
 
 
-COMMAND LINE OPTIONS (SELECTED)
-===============================
+COMMAND LINE OPTIONS
+====================
   -h                   Show usage with all command line options
   -l                   Passive/listening mode
   -m --max num         Maximum number of simultaneous calls
