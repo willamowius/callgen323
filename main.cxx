@@ -223,6 +223,7 @@ void CallGen::Main()
             "  -i --interface addr  Specify IP address and port listen on [*:1720]\n"
             "  -g --gatekeeper host Specify gatekeeper host [auto-discover]\n"
             "     --gateway prefix  Register as gateway with prefix (use multiple times or comma separated)\n"
+            "  -a --access-token-oid oid  Set OID of the gatekeeper access token to use [none]\n"
 #ifdef H323_H235
             "     --mediaenc        Enable Media encryption (value max cipher 128, 192 or 256)\n"
             "     --maxtoken        Set max token size for H.235.6 (1024, 2048, 4096, ...)\n"
