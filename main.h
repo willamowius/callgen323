@@ -4,7 +4,7 @@
  * H.323 call generator
  *
  * Copyright (c) 2001 Benny L. Prijono <seventhson@theseventhson.freeserve.co.uk>
- * Copyright (c) 2008-2018 Jan Willamowius <jan@willamowius.de>
+ * Copyright (c) 2008-2026 Jan Willamowius <jan@willamowius.de>
  *
  * The contents of this file are subject to the Mozilla Public License
  * Version 1.0 (the "License"); you may not use this file except in
@@ -217,7 +217,7 @@ class MyH323EndPoint : public H323EndPoint
       H323Connection & connection,    /// Connection that was established
       const PString & token           /// Token for identifying connection
     );
-    virtual PBoolean OnStartLogicalChannel(H323Connection & connection, H323Channel & PTRACE_channel);
+    virtual PBoolean OnStartLogicalChannel(H323Connection & connection, H323Channel & channel);
     virtual PBoolean SetVideoFrameSize(H323Capability::CapabilityFrameSize frameSize, int frameUnits = 1);
     virtual H323Capability::CapabilityFrameSize GetMaxFrameSize() const { return m_maxFrameSize; }
     virtual PBoolean OnSetGatewayPrefixes(PStringList & prefixes) const;

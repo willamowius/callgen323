@@ -256,7 +256,7 @@ void CallGen::Main()
             "  -v --video           Enable Video Support\n"
             "     --videopattern    Set video pattern to send, eg. 'Fake', 'Fake/BouncingBoxes' or 'Fake/MovingBlocks'\n"
             "  -R --framerate n     Set frame rate for outgoing video (fps)\n"
-            "  --maxframe name      Maximum Frame Size (qcif, cif, 4cif, 16cif, 480i, 720p, 1080i)\n"
+            "  --maxframe name      Maximum Frame Size (cif, 4cif, 16cif, 480i, 720p, 1080i)\n"
 #endif
 #ifdef H323_TLS
             "  --tls                TLS Enabled (must be set for TLS).\n"
@@ -573,20 +573,18 @@ void CallGen::Main()
 
   if (args.HasOption("maxframe")) {
     PCaselessString maxframe = args.GetOptionString("maxframe");
-	if (maxframe == "qcif")
-		h323->SetVideoFrameSize(H323Capability::qcifMPI);
-	else if (maxframe == "cif")
-	    h323->SetVideoFrameSize(H323Capability::cifMPI);
-	else if (maxframe == "4cif")
-        h323->SetVideoFrameSize(H323Capability::cif4MPI);
-	else if (maxframe == "16cif")
-        h323->SetVideoFrameSize(H323Capability::cif16MPI);
-	else if (maxframe == "480i")
-        h323->SetVideoFrameSize(H323Capability::i480MPI);
-	else if (maxframe == "720p")
-        h323->SetVideoFrameSize(H323Capability::p720MPI);
-	else if (maxframe == "1080i")
-        h323->SetVideoFrameSize(H323Capability::i1080MPI);
+	  if (maxframe == "cif")
+      h323->SetVideoFrameSize(H323Capability::cifMPI);
+	  else if (maxframe == "4cif")
+      h323->SetVideoFrameSize(H323Capability::cif4MPI);
+	  else if (maxframe == "16cif")
+      h323->SetVideoFrameSize(H323Capability::cif16MPI);
+	  else if (maxframe == "480i")
+      h323->SetVideoFrameSize(H323Capability::i480MPI);
+	  else if (maxframe == "720p")
+      h323->SetVideoFrameSize(H323Capability::p720MPI);
+	  else if (maxframe == "1080i")
+      h323->SetVideoFrameSize(H323Capability::i1080MPI);
     else {
       cerr << "Unknown maxframe value: " << maxframe << endl;
       return;
@@ -1011,7 +1009,7 @@ MyH323EndPoint::MyH323EndPoint()
   AddAllUserInputCapabilities(0, P_MAX_INDEX);
   SetPerCallBandwidth(384);
   SetFrameRate(30);
-  m_maxFrameSize = H323Capability::i1080MPI;  // TODO: make this configurable
+  m_maxFrameSize = H323Capability::i1080MPI;
   SetFuzzing(false);
   SetPercentBadRTPHeader(50);
   SetPercentBadRTPMedia(0);
@@ -1241,7 +1239,7 @@ PBoolean MyH323Connection::OpenVideoChannel(PBoolean isEncoding, H323VideoCodec 
         caps.framesizes.push_back(cap);
       }
       if (endpoint.GetMaxFrameSize() >= H323Capability::i480MPI) {
-        cap.SetFrameSize(640, 400);
+        cap.SetFrameSize(640, 480);
         caps.framesizes.push_back(cap);
       }
       cap.SetFrameSize(352, 288);
