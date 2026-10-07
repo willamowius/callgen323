@@ -220,6 +220,9 @@ class MyH323EndPoint : public H323EndPoint
     virtual PBoolean OnStartLogicalChannel(H323Connection & connection, H323Channel & PTRACE_channel);
     virtual PBoolean SetVideoFrameSize(H323Capability::CapabilityFrameSize frameSize, int frameUnits = 1);
     virtual H323Capability::CapabilityFrameSize GetMaxFrameSize() const { return m_maxFrameSize; }
+    virtual PBoolean OnSetGatewayPrefixes(PStringList & prefixes) const;
+
+    void SetGatewayPrefixes(const PStringArray & prefixes) { m_gatewayPrefixes = prefixes; }
 
     // sets the bearer capability rate, AdjustVideoCapabilities() applies it to the video capabilities
     void SetPerCallBandwidth(unsigned bw) { m_perCallBandwidth = bw; m_rateMultiplier = ceil((float)bw / 64); }
@@ -267,6 +270,7 @@ class MyH323EndPoint : public H323EndPoint
     bool m_startH239;
     int m_h239delay;
     int m_h239duration;
+    PStringArray m_gatewayPrefixes;
 };
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -323,6 +327,7 @@ class CallGen : public PProcess
     CallGen();
     void Main();
     static CallGen & Current() { return (CallGen&)PProcess::Current(); }
+    static void Unregister();
 
     PString    outgoingMessageFile;
     PString    incomingAudioDirectory;

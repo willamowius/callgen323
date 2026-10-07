@@ -38,11 +38,18 @@
 
 PCREATE_PROCESS(CallGen);
 
+#ifndef _WIN32
+static volatile sig_atomic_t shuttingDown = 0;
+
 void UnixShutdownHandler(int sig)
 {
-    //CallGen::Shutdown(); # TODO unregister from gk, maybe print stats, etc.
+    if (!shuttingDown) {    // 2nd signal while unregistering: exit immediately
+        shuttingDown = 1;
+        CallGen::Unregister();
+    }
     _exit(1);
 }
+#endif
 
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -113,10 +120,15 @@ void CallGen::Main()
 {
 #ifndef _WIN32
   signal(SIGCHLD, SIG_IGN);	// avoid zombies from H.264 plugin helper
-  signal(SIGTERM, UnixShutdownHandler);
-  signal(SIGINT, UnixShutdownHandler);
-  signal(SIGQUIT, UnixShutdownHandler);
-  #endif
+  struct sigaction sa;
+  memset(&sa, 0, sizeof(sa));
+  sa.sa_handler = UnixShutdownHandler;
+  sa.sa_flags = SA_NODEFER;  // allow a 2nd Ctrl-C to interrupt a hanging unregister
+  sigemptyset(&sa.sa_mask);
+  sigaction(SIGTERM, &sa, NULL);
+  sigaction(SIGINT, &sa, NULL);
+  sigaction(SIGQUIT, &sa, NULL);
+#endif
 
   PArgList & args = GetArguments();
   args.Parse("a-access-token-oid:"
@@ -125,6 +137,7 @@ void CallGen::Main()
              "C-cycle."
              "D-disable:"
              "f-fast-disable."
+             "-gateway:"
              "g-gatekeeper:"
 #ifdef H323_H235
              "-mediaenc:"
@@ -208,6 +221,7 @@ void CallGen::Main()
             "  -o --output file     Specify filename for trace output [stdout]\n"
             "  -i --interface addr  Specify IP address and port listen on [*:1720]\n"
             "  -g --gatekeeper host Specify gatekeeper host [auto-discover]\n"
+            "     --gateway prefix  Register as gateway with prefix (use multiple times or comma separated)\n"
 #ifdef H323_H235
             "     --mediaenc        Enable Media encryption (value max cipher 128, 192 or 256)\n"
             "     --maxtoken        Set max token size for H.235.6 (1024, 2048, 4096, ...)\n"
@@ -396,6 +410,14 @@ void CallGen::Main()
   if (args.HasOption("mcu")) {
     h323->SetTerminalType(H323EndPoint::e_MCUWithAVMP); // pose as MCU to always win H.245 master/slave negotiation
     cout << "Posing as MCU" << endl;
+  }
+
+  if (args.HasOption("gateway")) {
+    PStringArray prefixes = args.GetOptionString("gateway").Tokenise(",\n", false);
+    h323->SetGatewayPrefixes(prefixes);
+    if (!args.HasOption("mcu"))
+      h323->SetTerminalType(H323EndPoint::e_GatewayOnly); // with --mcu the prefixes are sent in the MCU info
+    cout << "Registering as gateway with prefixes: " << setfill(',') << prefixes << setfill(' ') << endl;
   }
 
 
@@ -649,7 +671,23 @@ void CallGen::Main()
     cout << "Total calls: " << totalAttempts << " attempted, " << totalEstablished << " established\n";
 
   // delete endpoint object so we unregister cleanly
-  delete h323;
+  MyH323EndPoint * ep = h323;
+  h323 = NULL;  // keep Unregister() from using the endpoint while it is deleted
+  delete ep;
+}
+
+// Unregister from the gatekeeper, but leave the endpoint intact
+// Used from the signal handler right before _exit(): not async-signal-safe, but no locks of our own
+void CallGen::Unregister()
+{
+  MyH323EndPoint * ep = Current().h323;
+  if (ep == NULL)
+    return;
+  H323Gatekeeper * gk = ep->GetGatekeeper();
+  if (gk != NULL && gk->IsRegistered()) {
+    PTRACE(2, "CallGen\tUnregistering from gatekeeper");
+    gk->UnregistrationRequest(H225_UnregRequestReason::e_maintenance);
+  }
 }
 
 void CallGen::Cancel(PThread &, INT)
@@ -953,6 +991,17 @@ void MyH323EndPoint::AdjustVideoCapabilities()
   }
 }
 #endif
+
+// TODO do we need this ??
+PBoolean MyH323EndPoint::OnSetGatewayPrefixes(PStringList & prefixes) const
+{
+  if (m_gatewayPrefixes.IsEmpty())
+    return FALSE;
+
+  for (PINDEX i = 0; i < m_gatewayPrefixes.GetSize(); ++i)
+    prefixes.AppendString(m_gatewayPrefixes[i]);
+  return TRUE;
+}
 
 PBoolean MyH323EndPoint::SetVideoFrameSize(H323Capability::CapabilityFrameSize frameSize, int frameUnits)
 {
