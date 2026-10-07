@@ -3,7 +3,7 @@
  *
  * H.323 call generator
  *
- * Copyright (c) 2008-2018 Jan Willamowius <jan@willamowius.de>
+ * Copyright (c) 2008-2026 Jan Willamowius <jan@willamowius.de>
  * Copyright (c) 2001 Benny L. Prijono <seventhson@theseventhson.freeserve.co.uk>
  *
  * The contents of this file are subject to the Mozilla Public License
@@ -37,6 +37,12 @@
 #endif
 
 PCREATE_PROCESS(CallGen);
+
+void UnixShutdownHandler(int sig)
+{
+    //CallGen::Shutdown(); # TODO unregister from gk, maybe print stats, etc.
+    _exit(1);
+}
 
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -107,7 +113,10 @@ void CallGen::Main()
 {
 #ifndef _WIN32
   signal(SIGCHLD, SIG_IGN);	// avoid zombies from H.264 plugin helper
-#endif
+  signal(SIGTERM, UnixShutdownHandler);
+  signal(SIGINT, UnixShutdownHandler);
+  signal(SIGQUIT, UnixShutdownHandler);
+  #endif
 
   PArgList & args = GetArguments();
   args.Parse("a-access-token-oid:"
@@ -217,7 +226,7 @@ void CallGen::Main()
 #endif
 #ifdef H323_H239
             "  --h239enable         Enable sending and receiving H.239 presentations\n"
-            "  --h239videopattern   Set video pattern to send for H.239, eg. 'Fake', 'Fake/BouncingBoxes' or 'Fake/MovingBlocks'\n"
+            "  --h239videopattern   Set video pattern to send for H.239, eg. Fake, Fake/BouncingBoxes or Fake/MovingBlocks, Fake/SolidColour, Fake/MovingLine, Fake/NTSCTest\n"
             "  --h239delay          Delay the start of the H.239 transmission in seconds [1 sec]\n"
             "  --h239duration       Duration the H.239 transmission in seconds [-1 - unlimited]\n"
 #endif
@@ -227,7 +236,7 @@ void CallGen::Main()
             "  -p --password pwd    Specify gatekeeper H.235 password [none]\n"
             "  -P --prefer codec    Set codec preference (use multiple times) [none]\n"
             "  -D --disable codec   Disable codec (use multiple times) [none]\n"
-            "  -b -- bandwidth kbps Specify bandwidth per call\n"
+            "  -b --bandwidth kbps  Specify bandwidth per call\n"
 #ifdef H323_VIDEO
             "  -v --video           Enable Video Support\n"
             "     --videopattern    Set video pattern to send, eg. 'Fake', 'Fake/BouncingBoxes' or 'Fake/MovingBlocks'\n"
@@ -369,12 +378,18 @@ void CallGen::Main()
   h323->ReorderCapabilities(args.GetOptionString('P').Lines());
   cout << "Local capabilities:\n" << h323->GetCapabilities() << endl;
 
-  // set local username, is necessary
+  // set local username
   if (args.HasOption('u')) {
     PStringArray aliases = args.GetOptionString('u').Lines();
     h323->SetLocalUserName(aliases[0]);
     for (PINDEX i = 1; i < aliases.GetSize(); ++i)
       h323->AddAliasName(aliases[i]);
+  } else {
+    PString randomUser = h323->GetLocalUserName() + "-";
+    for (unsigned i = 0; i < 20; ++i) {
+          randomUser += (char)('a' + PRandom::Number(25));
+    }
+    h323->SetLocalUserName(randomUser);
   }
   cout << "Local username: \"" << h323->GetLocalUserName() << '"' << endl;
 
@@ -501,6 +516,8 @@ void CallGen::Main()
   if (!args.HasOption('v')) {
     cout << "Video is disabled" << endl;
     h323->RemoveCapability(H323Capability::e_Video);
+  } else {
+    h323->AdjustVideoCapabilities();
   }
   PString videoPattern = "Fake/MovingBlocks";
   if (args.HasOption("videopattern")) {
@@ -873,6 +890,12 @@ void CallDetail::OnRTPStatistics(const RTP_Session & session, const PString & to
   }
 }
 
+void CallDetail::OnRTPFinalStatistics(const RTP_Session & session, const PString & token)
+{
+  // TODO collect end of call stats like packet loss, jitter, etc. and add to CDR
+  cout << "JW Final RTP statistics for session " << session.GetSessionID() << " packets=" << session.GetPacketsReceived() << " packet loss=" << session.GetPacketsLost() << endl;
+}
+
 ///////////////////////////////////////////////////////////////////////////////
 
 MyH323EndPoint::MyH323EndPoint()
@@ -886,7 +909,7 @@ MyH323EndPoint::MyH323EndPoint()
   AddAllUserInputCapabilities(0, P_MAX_INDEX);
   SetPerCallBandwidth(384);
   SetFrameRate(30);
-  m_maxFrameSize = H323Capability::i1080MPI;
+  m_maxFrameSize = H323Capability::i1080MPI;  // TODO: make this configurable
   SetFuzzing(false);
   SetPercentBadRTPHeader(50);
   SetPercentBadRTPMedia(0);
@@ -895,6 +918,41 @@ MyH323EndPoint::MyH323EndPoint()
   SetH239Delay(1);
   SetH239Duration(-1);
 }
+
+#ifdef H323_VIDEO
+void MyH323EndPoint::AdjustVideoCapabilities()
+{
+  const unsigned callBps = m_perCallBandwidth * 1000;
+  // Reserve bandwidth for audio (G.711), video may use the rest
+  const unsigned AudioReserveBps = 64000;
+  const unsigned videoBps = (callBps > AudioReserveBps) ? callBps - AudioReserveBps : 0;
+
+  // iterate backwards, entries may get removed
+  for (PINDEX i = capabilities.GetSize(); i-- > 0; ) {
+    H323Capability & cap = capabilities[i];
+    if (cap.GetMainType() != H323Capability::e_Video
+      || cap.GetSubType() == H245_VideoCapability::e_extendedVideoCapability) // H.239 content, not main video
+      continue;
+
+    OpalMediaFormat & fmt = cap.GetWritableMediaFormat();
+    const unsigned capBps = fmt.GetOptionInteger(OpalVideoFormat::MaxBitRateOption);
+    if (capBps > callBps) {
+      // eg. H.263-720 (4CIF) with 984 kbps in a 768 kbps call
+      cout << "Removing capability " << cap << ": " << capBps / 1000 << " kbps exceeds per call bandwidth "
+           << m_perCallBandwidth << " kbps" << endl;
+      PTRACE(2, "CallGen\tRemoving capability " << cap << ", max bitrate " << capBps << " > " << callBps);
+      capabilities.Remove(&cap);   // deletes cap
+      continue;
+    }
+
+    if (videoBps > 0) {
+      fmt.SetOptionInteger(OpalVideoFormat::MaxBitRateOption, videoBps);
+      fmt.SetOptionInteger(OpalVideoFormat::TargetBitRateOption, videoBps);
+      PTRACE(3, "CallGen\tSet max video bitrate of " << cap << " to " << videoBps << " bps");
+    }
+  }
+}
+#endif
 
 PBoolean MyH323EndPoint::SetVideoFrameSize(H323Capability::CapabilityFrameSize frameSize, int frameUnits)
 {
@@ -1002,6 +1060,11 @@ H323Channel * MyH323Connection::CreateRealTimeLogicalChannel(const H323Capabilit
 void MyH323Connection::OnRTPStatistics(const RTP_Session & session) const
 {
   ((MyH323Connection *)this)->details.OnRTPStatistics(session, GetCallToken());
+}
+
+void MyH323Connection::OnRTPFinalStatistics(const RTP_Session & session) const
+{
+  ((MyH323Connection *)this)->details.OnRTPFinalStatistics(session, GetCallToken());
 }
 
 PBoolean MyH323Connection::OpenAudioChannel(PBoolean isEncoding, unsigned bufferSize, H323AudioCodec & codec)
@@ -1398,4 +1461,3 @@ PBoolean RecordMessage::Close()
   reallyClose = TRUE;
   return PDelayChannel::Close();
 }
-

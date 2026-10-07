@@ -115,8 +115,37 @@ struct CallDetail
   void Drop(H323Connection & connection);
 
   void OnRTPStatistics(const RTP_Session & session, const PString & token);
+  void OnRTPFinalStatistics(const RTP_Session & session, const PString & token);
 };
 
+// ignore received audio
+class NullAudioOutputChannel : public PIndirectChannel
+{
+	PCLASSINFO(NullAudioOutputChannel, PIndirectChannel)
+
+	public:
+		NullAudioOutputChannel() { }
+		virtual ~NullAudioOutputChannel() { }
+
+		virtual PBoolean Write(const void * buf, PINDEX len) { outputDelay.Delay(len/2/8); return PTrue; }
+		virtual PBoolean Close() { return PTrue; }
+
+	protected:
+		PAdaptiveDelay outputDelay;	// needed to maintain timing for in-band DTMF detection
+};
+
+// ignore received video
+class NullVideoChannel : public PVideoChannel
+{
+	PCLASSINFO(NullVideoChannel, PVideoChannel)
+
+	public:
+		NullVideoChannel() { }
+		NullVideoChannel(const PString & device, Directions dir) { };
+		virtual ~NullVideoChannel() { }
+
+		virtual PBoolean DisableDecode() { return PTrue; }	// needs PTLib >= 2.9.0
+};
 
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -154,6 +183,7 @@ class MyH323Connection : public H323Connection
                                                        unsigned sessionID, const H245_H2250LogicalChannelParameters * param, RTP_QOS * rtpqos = NULL);
 
     virtual void OnRTPStatistics(const RTP_Session & session) const;
+    virtual void OnRTPFinalStatistics(const RTP_Session & session) const;
 
     CallDetail details;
 
@@ -191,8 +221,13 @@ class MyH323EndPoint : public H323EndPoint
     virtual PBoolean SetVideoFrameSize(H323Capability::CapabilityFrameSize frameSize, int frameUnits = 1);
     virtual H323Capability::CapabilityFrameSize GetMaxFrameSize() const { return m_maxFrameSize; }
 
-    // TODO: include in codec negotiations, only sets bearer capabilities right now
-    void SetPerCallBandwidth(unsigned bw) { m_rateMultiplier = ceil((float)bw / 64); }
+    // sets the bearer capability rate, AdjustVideoCapabilities() applies it to the video capabilities
+    void SetPerCallBandwidth(unsigned bw) { m_perCallBandwidth = bw; m_rateMultiplier = ceil((float)bw / 64); }
+    unsigned GetPerCallBandwidth() const { return m_perCallBandwidth; }
+#ifdef H323_VIDEO
+    // remove video capabilities with a bitrate above the per call bandwidth, set the others to the bandwidth available for video
+    void AdjustVideoCapabilities();
+#endif
     BYTE GetRateMultiplier() const { return m_rateMultiplier; }
 
     void SetVideoPattern(const PString & pattern, bool isH239 = false) { if (isH239) m_h239videoPattern = pattern; else m_videoPattern = pattern; }
@@ -219,6 +254,7 @@ class MyH323EndPoint : public H323EndPoint
     int GetH239Duration() { return m_h239duration; }
 
   protected:
+    unsigned m_perCallBandwidth;
     BYTE m_rateMultiplier;
     PString m_videoPattern;
     PString m_h239videoPattern;
@@ -297,29 +333,28 @@ class CallGen : public PProcess
     unsigned   totalEstablished;
     PMutex     coutMutex;
 
-  MyH323EndPoint * h323;
+    MyH323EndPoint * h323;
 
-  PBoolean Start(const PString & destination, PString & token) {
-    return h323->MakeCall(destination, token) != NULL;
-  }
-  PBoolean Exists(const PString & token) {
-    return h323->HasConnection(token);
-  }
-  PBoolean IsEstablished(const PString & token) {
-    return h323->IsConnectionEstablished(token);
-  }
-  PBoolean Clear(PString & token) {
-    return h323->ClearCallSynchronous(token);
-  }
-  void ClearAll() {
-    h323->ClearAllCalls();
-  }
+    PBoolean Start(const PString & destination, PString & token) {
+      return h323->MakeCall(destination, token) != NULL;
+    }
+    PBoolean Exists(const PString & token) {
+      return h323->HasConnection(token);
+    }
+    PBoolean IsEstablished(const PString & token) {
+      return h323->IsConnectionEstablished(token);
+    }
+    PBoolean Clear(PString & token) {
+      return h323->ClearCallSynchronous(token);
+    }
+    void ClearAll() {
+      h323->ClearAllCalls();
+    }
 
   protected:
     PDECLARE_NOTIFIER(PThread, CallGen, Cancel);
     PConsoleChannel console;
     CallThreadList threadList;
 };
-
 
 ///////////////////////////////////////////////////////////////////////////////
