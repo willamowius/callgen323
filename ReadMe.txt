@@ -109,11 +109,13 @@ written first. Columns:
   Avg/Min/Max send time (ms), Avg/Min/Max receive time (ms),
   Avg jitter (ms), Max jitter (ms), First data received
 
-The "First data received" column is empty if no packets were received.
+The file contains one line per RTP session in a call, so for an audio call you'll
+see one line, for a video calls, you'll see two lines that you can aggregate by Calld ID,
+if you want. Only RTP session that actually transmit any packets are shown.
 
 
-You can run both instances in a single host if you want, as long as
-you have two IP interfaces on your host. All you need to do is to
+You can run multiple instances in a single host if you want, as long as
+they use different ports or a different interface. All you need to do is to
 specify different IP or port to listen for each callgen323 (with
 the -i option).
 
