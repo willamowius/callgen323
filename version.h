@@ -3,6 +3,8 @@
  *
  * Version number header file for CallGen323
  *
+ * Copyright (c) 2008-2026 Jan Willamowius <jan@willamowius.de>
+ * Copyright (c) 2001 Benny L. Prijono <seventhson@theseventhson.freeserve.co.uk>
  * Copyright (c) 1993-2000 Equivalence Pty. Ltd.
  *
  * The contents of this file are subject to the Mozilla Public License
@@ -31,8 +33,8 @@
 #ifndef _CallGen_VERSION_H
 #define _CallGen_VERSION_H
 
-#define MAJOR_VERSION 2
-#define MINOR_VERSION 3
+#define MAJOR_VERSION 3
+#define MINOR_VERSION 0
 #define BUILD_TYPE    ReleaseCode
 #define BUILD_NUMBER 0
 
