@@ -34,6 +34,7 @@
 
 #ifndef _WIN32
 #include <signal.h>
+#include <poll.h>
 #endif
 
 PCREATE_PROCESS(CallGen);
@@ -48,6 +49,14 @@ void UnixShutdownHandler(int sig)
         CallGen::Unregister();
     }
     _exit(1);
+}
+
+static volatile sig_atomic_t gracefulShutdownRequested = 0;
+
+// SIGUSR1: graceful shutdown like pressing ENTER, the actual work is done in WaitForShutdownRequest()
+void UnixGracefulShutdownHandler(int sig)
+{
+    gracefulShutdownRequested = 1;
 }
 #endif
 
@@ -128,6 +137,12 @@ void CallGen::Main()
   sigaction(SIGTERM, &sa, NULL);
   sigaction(SIGINT, &sa, NULL);
   sigaction(SIGQUIT, &sa, NULL);
+  struct sigaction usr1;
+  memset(&usr1, 0, sizeof(usr1));
+  usr1.sa_handler = UnixGracefulShutdownHandler;
+  usr1.sa_flags = SA_RESTART;
+  sigemptyset(&usr1.sa_mask);
+  sigaction(SIGUSR1, &usr1, NULL);
 #endif
 
   PArgList & args = GetArguments();
@@ -633,8 +648,12 @@ void CallGen::Main()
   }
 
   if (args.HasOption('l')) {
-    cout << "Endpoint is listening for incoming calls, press ENTER to exit.\n";
-    console.ReadChar();
+    cout << "Endpoint is listening for incoming calls, press ENTER to exit";
+#ifndef _WIN32
+    cout << " (or kill -USR1 " << GetProcessID() << ")";
+#endif
+    cout << ".\n";
+    WaitForShutdownRequest();
     h323->ClearAllCalls();
   }
   else {
@@ -730,20 +749,61 @@ void CallGen::Unregister()
   }
 }
 
+// Wait until ENTER is pressed or SIGUSR1 is received
+// Returns FALSE if the console was closed while waiting (all call sets completed)
+PBoolean CallGen::WaitForShutdownRequest()
+{
+#ifdef _WIN32
+  while (console.ReadChar() != '\n') {
+    if (!console.IsOpen())
+      return FALSE;
+  }
+  return TRUE;
+#else
+  // poll stdin with a timeout, a blocking read would not return on a signal
+  PBoolean consoleEOF = FALSE;  // eg. stdin redirected from /dev/null
+  while (!gracefulShutdownRequested) {
+    if (!console.IsOpen())
+      return FALSE;
+    if (consoleEOF) {
+      PThread::Sleep(200);
+      continue;
+    }
+    struct pollfd pfd;
+    pfd.fd = console.GetHandle();
+    pfd.events = POLLIN;
+    pfd.revents = 0;
+    if (poll(&pfd, 1, 200) > 0) {
+      int c = console.ReadChar();
+      if (c == '\n')
+        return TRUE;
+      if (c < 0)
+        consoleEOF = TRUE;
+    }
+  }
+  PTRACE(2, "CallGen\tReceived SIGUSR1");
+  coutMutex.Wait();
+  cout << "\nReceived SIGUSR1" << endl;
+  coutMutex.Signal();
+  return TRUE;
+#endif
+}
+
 void CallGen::Cancel(PThread &, INT)
 {
   PTRACE(3, "CallGen\tCancel thread started.");
 
   coutMutex.Wait();
-  cout << "Press ENTER at any time to quit.\n" << endl;
+  cout << "Press ENTER at any time to quit";
+#ifndef _WIN32
+  cout << " (or kill -USR1 " << GetProcessID() << ")";
+#endif
+  cout << ".\n" << endl;
   coutMutex.Signal();
 
-  // wait for a keypress
-  while (console.ReadChar() != '\n') {
-    if (!console.IsOpen()) {
-      PTRACE(3, "CallGen\tCancel thread ended.");
-      return;
-    }
+  if (!WaitForShutdownRequest()) {
+    PTRACE(3, "CallGen\tCancel thread ended.");
+    return;
   }
 
   PTRACE(2, "CallGen\tCancelling calls.");

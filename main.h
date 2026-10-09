@@ -359,6 +359,7 @@ class CallGen : public PProcess
     }
 
   protected:
+    PBoolean WaitForShutdownRequest();
     PDECLARE_NOTIFIER(PThread, CallGen, Cancel);
     PConsoleChannel console;
     CallThreadList threadList;

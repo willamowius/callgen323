@@ -104,6 +104,12 @@ Press ENTER to stop callgen323 gracefully: it stops making new calls, clears all
 active calls, writes the RTP statistics (--rtp-stats) and CDRs (-c) for those
 calls and then unregisters from the gatekeeper.
 
+Sending SIGUSR1 has the same effect as pressing ENTER (not on Windows). This is
+useful when callgen323 runs in the background or from a script. The process ID
+is shown in the "press ENTER" message at startup:
+
+  kill -USR1 <pid>
+
 Ctrl-C skips the graceful shutdown: callgen323 only unregisters from the gatekeeper
 and then ends immediately. Calls that are still active are not cleared, so no RTP
 statistics or CDRs are written for them (lines for calls that already ended are
@@ -142,8 +148,8 @@ RTP Statistics
 
 With --rtp-stats, callgen323 appends one line per RTP session (audio, video, H.239)
 to the given CSV file when the session ends. If the file is empty, a header line is
-written first. Stop callgen323 with ENTER, not Ctrl-C, or the RTP sessions
-of active calls won't be written (see "Stopping callgen323").
+written first. Stop callgen323 with ENTER or SIGUSR1, not Ctrl-C, or the RTP
+sessions of active calls won't be written (see "Stopping callgen323").
 
 Columns:
 
