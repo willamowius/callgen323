@@ -76,9 +76,9 @@ Start in listening mode (no gatekeeper) and allow it to receive a maximum of 5 c
 Start in dialing mode, 5 concurrent calls, dialing IP 1.2.3.4
   callgen323 -n -m 5 1.2.3.4
 
-Start in dialing mode, 100 concurrent calls, starting a new call every 500 ms
-(default is 100 ms) to avoid flooding the destination during ramp-up:
-  callgen323 -n -m 100 -d 500 1.2.3.4
+Start in dialing mode, 100 concurrent calls, starting a new call every 2000 ms
+(default is 800 ms) to avoid flooding the destination during ramp-up:
+  callgen323 -n -m 100 -d 2000 1.2.3.4
 
 Start in dialing mode, register to a gatekeeper using H.460.18 and H.460.19 RTP multiplexing,
 enable H.264 video and sending of H.239:
@@ -106,7 +106,7 @@ Call Timing
 
 With -m N, callgen323 runs N call threads in parallel. Each thread does:
 
-  1. wait its start delay: thread n waits (n-1) * -d milliseconds [100 ms]
+  1. wait its start delay: thread n waits (n-1) * -d milliseconds [800 ms]
   2. make a call lasting a random time between --tmincall and --tmaxcall
   3. wait a random time between --tminwait and --tmaxwait seconds
   4. repeat from step 2 until -r calls are done
@@ -123,8 +123,9 @@ So -d and --tminwait/--tmaxwait control different things:
 After the first round, the threads drift apart because of the random call
 durations and waits, so -d does not keep calls evenly spaced over a long run.
 
-Example: -m 3 -d 100 starts the first calls at 0 ms, 100 ms and 200 ms. After
-each call ends, that thread waits 10-30 s (default) before calling again.
+Example: -m 3 with the default -d 800 starts the first calls at 0 ms, 800 ms
+and 1600 ms. After each call ends, that thread waits 10-30 s (default) before
+calling again.
 
 
 RTP Statistics
@@ -180,7 +181,7 @@ COMMAND LINE OPTIONS
      --mcu             Pose as MCU (to always win master/slave negotiation)
   -r --repeat num      Repeat calls n times per simultaneous call, 0 = infinite [10]
   -C --cycle           Each simultaneous call cycles through destination list
-  -d --delay ms        Delay between the first calls of the simultaneous call threads in ms [100]
+  -d --delay ms        Delay between the first calls of the simultaneous call threads in ms [800]
   -t --trace           Trace enable (use multiple times for more detail)
   -o --output file     Specify filename for trace output [stdout]
   -i --interface addr  Specify IP address and port listen on [*:1720]

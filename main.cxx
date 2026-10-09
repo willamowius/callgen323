@@ -220,7 +220,7 @@ void CallGen::Main()
             "     --mcu             Pose as MCU (to always win master/slave neg.)\n"
             "  -r --repeat num      Repeat calls n times per simultaneous call, 0 = infinite [10]\n"
             "  -C --cycle           Each simultaneous call cycles through destination list\n"
-            "  -d --delay ms        Delay between the first calls of the simultaneous call threads in ms [100]\n"
+            "  -d --delay ms        Delay between the first calls of the simultaneous call threads in ms [800]\n"
             "  -t --trace           Trace enable (use multiple times for more detail)\n"
             "  -o --output file     Specify filename for trace output [stdout]\n"
             "  -i --interface addr  Specify IP address and port listen on [*:1720]\n"
@@ -661,7 +661,7 @@ void CallGen::Main()
       cout << 's';
     cout << ' ';
 
-    params.start_delay.SetInterval(args.GetOptionString('d', "100").AsUnsigned());
+    params.start_delay.SetInterval(args.GetOptionString('d', "800").AsUnsigned());
 
     params.repeat = args.GetOptionString('r', "10").AsUnsigned();
     if (params.repeat != 0)
