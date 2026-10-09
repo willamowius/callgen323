@@ -163,6 +163,7 @@ void CallGen::Main()
 #endif
              "I-in-dir:"
              "i-interface:"
+             "-listenport:"
              "l-listen."
              "m-max:"
              " -mcu."
@@ -221,6 +222,7 @@ void CallGen::Main()
             "  -t --trace           Trace enable (use multiple times for more detail)\n"
             "  -o --output file     Specify filename for trace output [stdout]\n"
             "  -i --interface addr  Specify IP address and port listen on [*:1720]\n"
+            "     --listenport port Specify only the port to listen on [1720]\n"
             "  -g --gatekeeper host Specify gatekeeper host [auto-discover]\n"
             "     --gateway prefix  Register as gateway with prefix (use multiple times or comma separated)\n"
             "  -a --access-token-oid oid  Set OID of the gatekeeper access token to use [none]\n"
@@ -335,10 +337,29 @@ void CallGen::Main()
   H323ListenerTCP * listener = NULL;
   PIPSocket::Address interfaceAddress(INADDR_ANY);
   WORD listenPort = H323EndPoint::DefaultTcpPort;
+  bool listenPortSet = false;
+  if (args.HasOption("listenport")) {
+    PString portStr = args.GetOptionString("listenport");
+    unsigned p = portStr.AsUnsigned();
+    if (p == 0 || p > 65535) {
+      cout << "Invalid --listenport \"" << portStr << "\"" << endl;
+      return;
+    }
+    listenPort = (WORD)p;
+    listenPortSet = true;
+  }
   if (args.HasOption('i')) {
     PString interface = args.GetOptionString('i');
-    if (!SplitAddress(interface, interface, listenPort)) {
+    WORD interfacePort = 0;
+    if (!SplitAddress(interface, interface, interfacePort)) {
       cout << "Could not parse param of -i \"" << interface << "\" to ip address and port." << endl;
+    }
+    if (interfacePort != 0) {
+      if (listenPortSet && interfacePort != listenPort) {
+        cout << "Error: port in -i (" << interfacePort << ") differs from --listenport (" << listenPort << ")" << endl;
+        return;
+      }
+      listenPort = interfacePort;
     }
     interfaceAddress = interface;
   }

@@ -117,7 +117,14 @@ if you want. Only RTP session that actually transmit any packets are shown.
 You can run multiple instances in a single host if you want, as long as
 they use different ports or a different interface. All you need to do is to
 specify different IP or port to listen for each callgen323 (with
-the -i option).
+the -i option, or with --listenport if you only want to change the port).
+
+  callgen323 -l -i 192.168.1.10:1721
+  callgen323 -l --listenport 1721
+  callgen323 -l -i 192.168.1.10 --listenport 1721
+
+If both -i and --listenport are given and -i includes a port, the two
+ports must match, otherwise callgen323 prints an error and exits.
 
 Audio files for OGM messages must be 16bit Microsoft PCM files
 in WAV format at 8000 Hz (like the supplied ogm.wav).
@@ -146,6 +153,7 @@ COMMAND LINE OPTIONS
   -t --trace           Trace enable (use multiple times for more detail)
   -o --output file     Specify filename for trace output [stdout]
   -i --interface addr  Specify IP address and port listen on [*:1720]
+     --listenport port Specify only the port to listen on [1720]
   -g --gatekeeper host Specify gatekeeper host [auto-discover]
      --gateway prefix  Register as gateway with prefix (use multiple times or comma separated)
   -a --access-token-oid oid  Set OID of the gatekeeper access token to use [none]
