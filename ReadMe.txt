@@ -97,8 +97,17 @@ Start in dialing mode and write RTP statistics for each call to a CSV file:
 Without -u, callgen323 registers with a random username (login name plus a random suffix),
 so multiple instances can register to the same gatekeeper without alias conflicts.
 
-Press Ctrl-C to stop callgen323. It will clear all calls and unregister from the
-gatekeeper. Press Ctrl-C a 2nd time to exit immediately if the unregistration hangs.
+Stopping callgen323
+-------------------
+
+Press ENTER to stop callgen323 gracefully: it stops making new calls, clears all
+active calls, writes the RTP statistics (--rtp-stats) and CDRs (-c) for those
+calls and then unregisters from the gatekeeper.
+
+Ctrl-C skips the graceful shutdown: callgen323 only unregisters from the gatekeeper
+and then ends immediately. Calls that are still active are not cleared, so no RTP
+statistics or CDRs are written for them (lines for calls that already ended are
+kept). Press Ctrl-C a 2nd time to exit immediately if the unregistration hangs.
 
 
 Call Timing
@@ -133,7 +142,10 @@ RTP Statistics
 
 With --rtp-stats, callgen323 appends one line per RTP session (audio, video, H.239)
 to the given CSV file when the session ends. If the file is empty, a header line is
-written first. Columns:
+written first. Stop callgen323 with ENTER, not Ctrl-C, or the RTP sessions
+of active calls won't be written (see "Stopping callgen323").
+
+Columns:
 
   Time, Call Id, RTP Session Id, Packets sent, Octets sent, Packets received,
   Octets received, Packets lost, Packets out of order,
