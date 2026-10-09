@@ -76,6 +76,10 @@ Start in listening mode (no gatekeeper) and allow it to receive a maximum of 5 c
 Start in dialing mode, 5 concurrent calls, dialing IP 1.2.3.4
   callgen323 -n -m 5 1.2.3.4
 
+Start in dialing mode, 100 concurrent calls, starting a new call every 500 ms
+(default is 100 ms) to avoid flooding the destination during ramp-up:
+  callgen323 -n -m 100 -d 500 1.2.3.4
+
 Start in dialing mode, register to a gatekeeper using H.460.18 and H.460.19 RTP multiplexing,
 enable H.264 video and sending of H.239:
   PWLIBPLUGINDIR=/usr/local/lib/pwlib
@@ -95,6 +99,32 @@ so multiple instances can register to the same gatekeeper without alias conflict
 
 Press Ctrl-C to stop callgen323. It will clear all calls and unregister from the
 gatekeeper. Press Ctrl-C a 2nd time to exit immediately if the unregistration hangs.
+
+
+Call Timing
+-----------
+
+With -m N, callgen323 runs N call threads in parallel. Each thread does:
+
+  1. wait its start delay: thread n waits (n-1) * -d milliseconds [100 ms]
+  2. make a call lasting a random time between --tmincall and --tmaxcall
+  3. wait a random time between --tminwait and --tmaxwait seconds
+  4. repeat from step 2 until -r calls are done
+
+So -d and --tminwait/--tmaxwait control different things:
+
+  -d                     Ramp-up only: spreads out the first call of each thread,
+                         so the N initial calls don't hit the destination all at
+                         once. It is in milliseconds and is not used again later.
+  --tminwait/--tmaxwait  Pause within one thread between the end of one call
+                         and its next call. In whole seconds, minimum 1.
+                         They don't apply to a thread's first call.
+
+After the first round, the threads drift apart because of the random call
+durations and waits, so -d does not keep calls evenly spaced over a long run.
+
+Example: -m 3 -d 100 starts the first calls at 0 ms, 100 ms and 200 ms. After
+each call ends, that thread waits 10-30 s (default) before calling again.
 
 
 RTP Statistics
@@ -146,10 +176,11 @@ COMMAND LINE OPTIONS
 ====================
   -h                   Show usage with all command line options
   -l                   Passive/listening mode
-  -m --max num         Maximum number of simultaneous calls
+  -m --max num         Maximum number of simultaneous calls [1]
      --mcu             Pose as MCU (to always win master/slave negotiation)
-  -r --repeat num      Repeat calls n times
+  -r --repeat num      Repeat calls n times per simultaneous call, 0 = infinite [10]
   -C --cycle           Each simultaneous call cycles through destination list
+  -d --delay ms        Delay between the first calls of the simultaneous call threads in ms [100]
   -t --trace           Trace enable (use multiple times for more detail)
   -o --output file     Specify filename for trace output [stdout]
   -i --interface addr  Specify IP address and port listen on [*:1720]
@@ -198,9 +229,9 @@ COMMAND LINE OPTIONS
   --rtp-max port       Specific the maximum RTP/RTCP pair of UDP port to use
   --tmaxest  secs      Maximum time to wait for "Established" [0]
   --tmincall secs      Minimum call duration in seconds [10]
-  --tmaxcall secs      Maximum call duration in seconds [30]
-  --tminwait secs      Minimum interval between calls in seconds [10]
-  --tmaxwait secs      Maximum interval between calls in seconds [30]
+  --tmaxcall secs      Maximum call duration in seconds [60]
+  --tminwait secs      Minimum wait after a call ends before the same thread calls again [10]
+  --tmaxwait secs      Maximum wait after a call ends before the same thread calls again [30]
   --fuzzing            Enable RTP fuzzing
   --fuzz-header        Percentage of RTP header to randomly overwrite [50]
   --fuzz-media         Percentage of RTP media to randomly overwrite [0]

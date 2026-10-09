@@ -135,6 +135,7 @@ void CallGen::Main()
              "b-bandwidth:"
              "c-cdr:"
              "C-cycle."
+             "d-delay:"
              "D-disable:"
              "f-fast-disable."
              "-gateway:"
@@ -215,10 +216,11 @@ void CallGen::Main()
             "  callgen [options] destination [ destination ... ]\n"
             "where options:\n"
             "  -l                   Passive/listening mode\n"
-            "  -m --max num         Maximum number of simultaneous calls\n"
+            "  -m --max num         Maximum number of simultaneous calls [1]\n"
             "     --mcu             Pose as MCU (to always win master/slave neg.)\n"
-            "  -r --repeat num      Repeat calls n times\n"
+            "  -r --repeat num      Repeat calls n times per simultaneous call, 0 = infinite [10]\n"
             "  -C --cycle           Each simultaneous call cycles through destination list\n"
+            "  -d --delay ms        Delay between the first calls of the simultaneous call threads in ms [100]\n"
             "  -t --trace           Trace enable (use multiple times for more detail)\n"
             "  -o --output file     Specify filename for trace output [stdout]\n"
             "  -i --interface addr  Specify IP address and port listen on [*:1720]\n"
@@ -283,9 +285,9 @@ void CallGen::Main()
             "  --rtp-max port       Specific the maximum RTP/RTCP pair of UDP port to use\n"
             "  --tmaxest  secs      Maximum time to wait for \"Established\" [0]\n"
             "  --tmincall secs      Minimum call duration in seconds [10]\n"
-            "  --tmaxcall secs      Maximum call duration in seconds [30]\n"
-            "  --tminwait secs      Minimum interval between calls in seconds [10]\n"
-            "  --tmaxwait secs      Maximum interval between calls in seconds [30]\n"
+            "  --tmaxcall secs      Maximum call duration in seconds [60]\n"
+            "  --tminwait secs      Minimum wait after a call ends before the same thread calls again [10]\n"
+            "  --tmaxwait secs      Maximum wait after a call ends before the same thread calls again [30]\n"
             "  --fuzzing            Enable RTP fuzzing\n"
             "  --fuzz-header        Percentage of RTP header to randomly overwrite [50]\n"
             "  --fuzz-media         Percentage of RTP media to randomly overwrite [0]\n"
@@ -296,6 +298,9 @@ void CallGen::Main()
             "  the call running once established. If zero (the default) then --tmincall\n"
             "  is the length of the call from initiation. The call may or may not be\n"
             "  \"answered\" within that time.\n"
+            "  -d only staggers the start of the -m simultaneous call threads: thread n\n"
+            "  makes its first call (n-1) * delay ms after start. --tminwait/--tmaxwait\n"
+            "  set the random pause each thread takes after a call before its next one.\n"
             "\n";
     return;
   }
@@ -656,6 +661,8 @@ void CallGen::Main()
       cout << 's';
     cout << ' ';
 
+    params.start_delay.SetInterval(args.GetOptionString('d', "100").AsUnsigned());
+
     params.repeat = args.GetOptionString('r', "10").AsUnsigned();
     if (params.repeat != 0)
       cout << params.repeat;
@@ -668,7 +675,7 @@ void CallGen::Main()
       cout << ", grand total of " << number*params.repeat << " calls";
     cout << '.' << endl;
 
-    // create some threads to do calls, but start them randomly
+    // create some threads to do calls, each one starting --delay ms after the previous one
     for (unsigned idx = 0; idx < number; idx++) {
       if (args.HasOption('C'))
         threadList.Append(new CallThread(idx+1, args.GetParameters(), params));
@@ -792,7 +799,7 @@ void CallThread::Main()
   CallGen & callgen = CallGen::Current();
   PRandom rand(PRandom::Number());
 
-  PTimeInterval delay = RandomRange(rand, (index-1)*500, (index+1)*500);
+  PTimeInterval delay = params.start_delay * (index-1);
   OUTPUT(index, PString::Empty(), "Initial delay of " << delay << " seconds");
 
   if (exit.Wait(delay)) {

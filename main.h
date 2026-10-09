@@ -285,6 +285,7 @@ struct CallParams
   CallGen & callgen;
 
   unsigned repeat;
+  PTimeInterval start_delay;
   PTimeInterval tmax_est;
   PTimeInterval tmin_call;
   PTimeInterval tmax_call;
