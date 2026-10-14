@@ -1514,22 +1514,20 @@ void RTPFuzzingChannel::TransmitRTP(PTimer &, H323_INT)
     m_rtpPacket.SetTimestamp(m_timestamp);
     m_rtpPacket.SetSequenceNumber(m_rtpPacket.GetSequenceNumber() + 1);
 
-    for (int i = 0; i < m_rtpPacket.GetHeaderSize(); i++) {
-        // overwrite n% of the bytes with random values
-        if (PRandom::Number(100) > (100 - m_percentBadRTPHeader)) {
-            m_rtpPacket[i] = PRandom::Number(255);
-        }
+    // fuzz a copy: the template keeps a valid header, so sizes stay fixed
+    const PINDEX headerSize = m_rtpPacket.GetHeaderSize();
+    const PINDEX packetSize = headerSize + m_rtpPacket.GetPayloadSize();
+    PBYTEArray packet((const BYTE *)m_rtpPacket, packetSize);
+    BYTE * data = packet.GetPointer();
+
+    for (PINDEX i = 0; i < packetSize; ++i) {
+        const unsigned percent = (i < headerSize) ? m_percentBadRTPHeader : m_percentBadRTPMedia;
+        if (PRandom::Number(100) > (100 - percent))
+            data[i] = (BYTE)PRandom::Number(255);
     }
 
-    // random RTP media
-    for (int i = 0; i < m_rtpPacket.GetPayloadSize(); i++) {
-        if (PRandom::Number(100) > (100 - m_percentBadRTPMedia)) {
-            *(m_rtpPacket.GetPayloadPtr() + i) = PRandom::Number(255);
-        }
-    }
-
-    PTRACE(2, "Sending fuzzed RTP to " << remoteMediaControlAddress << " payload type=" << m_rtpPacket.GetPayloadType());
-    m_rtpSocket.Write(m_rtpPacket, m_rtpPacket.GetHeaderSize() + m_rtpPacket.GetPayloadSize());
+    PTRACE(2, "Sending fuzzed RTP to " << remoteMediaAddress << " payload type=" << (int)m_payloadType);
+    m_rtpSocket.Write(data, packetSize);
 }
 
 void RTPFuzzingChannel::TransmitRTCP(PTimer &, H323_INT)
