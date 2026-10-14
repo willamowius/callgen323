@@ -78,6 +78,8 @@ public:
     PDECLARE_NOTIFIER(PTimer, RTPFuzzingChannel, TransmitRTCP);
 
 protected:
+    void AddReceiverReport(RTP_ControlFrame::ReceiverReport & receiver);
+
     PUDPSocket m_rtpSocket;
     PUDPSocket m_rtcpSocket;
     RTP_DataFrame m_rtpPacket;
@@ -91,6 +93,10 @@ protected:
     unsigned m_percentBadRTPHeader;
     unsigned m_percentBadRTPMedia;
     unsigned m_percentBadRTCP;
+    PString m_cname;
+    DWORD m_remoteSyncSource;   // we don't parse incoming media, so we report on a made-up source
+    DWORD m_rrExtendedSeq;
+    unsigned m_rrPacketsLost;
 };
 
 ///////////////////////////////////////////////////////////////////////////////

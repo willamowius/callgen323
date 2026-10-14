@@ -1476,6 +1476,10 @@ RTPFuzzingChannel::RTPFuzzingChannel(MyH323EndPoint & ep, H323Connection & conne
     if (m_frameTimeUnits == 0)
         m_frameTimeUnits = m_frameTime * 8;
     m_timestamp = 0;
+    m_cname = "callgen323@" + myip.AsString();
+    m_remoteSyncSource = PRandom::Number();
+    m_rrExtendedSeq = PRandom::Number(65000);
+    m_rrPacketsLost = 0;
     PTRACE(2, "New fuzzing transmit channel: PT=" << (int)m_payloadType << " frame time=" << m_frameTime
            << " frame size=" << m_rtpPacket.GetPayloadSize());
 }
@@ -1530,43 +1534,68 @@ void RTPFuzzingChannel::TransmitRTP(PTimer &, H323_INT)
     m_rtpSocket.Write(data, packetSize);
 }
 
+void RTPFuzzingChannel::AddReceiverReport(RTP_ControlFrame::ReceiverReport & receiver)
+{
+    // plausible stats: RTCP timer runs at the RTP frame rate, so 1 packet expected per report
+    const unsigned expected = 1;
+    const unsigned lost = (PRandom::Number(20) == 0) ? 1 : 0;   // ~5% loss
+    m_rrExtendedSeq += expected;
+    m_rrPacketsLost += lost;
+
+    receiver.ssrc = m_remoteSyncSource;
+    receiver.fraction = (BYTE)PMIN(255U, (lost << 8) / expected);
+    receiver.SetLostPackets(m_rrPacketsLost);
+    receiver.last_seq = m_rrExtendedSeq;
+    receiver.jitter = PRandom::Number(m_frameTimeUnits + 1);
+    receiver.lsr = 0;   // RFC 3550 6.4.1: 0 if no SR received from this source
+    receiver.dlsr = 0;
+}
+
 void RTPFuzzingChannel::TransmitRTCP(PTimer &, H323_INT)
 {
     const unsigned SecondsFrom1900to1970 = (70*365+17)*24*60*60U;
-    RTP_ControlFrame m_rtcpPacket;
+    RTP_ControlFrame rtcpPacket;    // 2048 byte buffer, large enough that references stay valid while adding parts
 
-    m_rtcpPacket.SetPayloadType(RTP_ControlFrame::e_SenderReport);
-    m_rtcpPacket.SetPayloadSize(sizeof(RTP_ControlFrame::SenderReport));
+    // alternate between SR (with 1 report block) and RR to cover both parsers
+    RTP_ControlFrame::ReceiverReport * receiver = NULL;
+    if (PRandom::Number(2) == 0) {
+        rtcpPacket.SetPayloadType(RTP_ControlFrame::e_SenderReport);
+        rtcpPacket.SetPayloadSize(sizeof(RTP_ControlFrame::SenderReport) + sizeof(RTP_ControlFrame::ReceiverReport));
 
-    RTP_ControlFrame::SenderReport * sender = (RTP_ControlFrame::SenderReport *)m_rtcpPacket.GetPayloadPtr();
-    sender->ssrc = m_syncSource;
-    PTime now;
-    sender->ntp_sec = now.GetTimeInSeconds() + SecondsFrom1900to1970; // Convert from 1970 to 1900
-    sender->ntp_frac = now.GetMicrosecond() * 4294; // Scale microseconds to "fraction" from 0 to 2^32
-    sender->rtp_ts = m_timestamp;
-    sender->psent = m_rtpPacket.GetSequenceNumber();
-    sender->osent = m_rtpPacket.GetSequenceNumber() * m_rtpPacket.GetPayloadSize();
-/*
-    // TODO: add Receiver report
-    // TODO: etPayloadType(RTP_ControlFrame::e_ReceiverReport)
-    m_rtcpPacket.SetPayloadSize(sizeof(RTP_ControlFrame::SenderReport) + sizeof(RTP_ControlFrame::ReceiverReport));
-    m_rtcpPacket.SetCount(1);
-    // TODO: insert ReceiverReport data, for now rely on the random data we insert
-    //AddReceiverReport(*(RTP_ControlFrame::ReceiverReport *)&sender[1]);
-*/
-    m_rtcpPacket.WriteNextCompound();
-    (void)m_rtcpPacket.AddSourceDescription(m_syncSource);
+        RTP_ControlFrame::SenderReport * sender = (RTP_ControlFrame::SenderReport *)rtcpPacket.GetPayloadPtr();
+        sender->ssrc = m_syncSource;
+        PTime now;
+        sender->ntp_sec = now.GetTimeInSeconds() + SecondsFrom1900to1970; // Convert from 1970 to 1900
+        sender->ntp_frac = now.GetMicrosecond() * 4294; // Scale microseconds to "fraction" from 0 to 2^32
+        sender->rtp_ts = m_timestamp;
+        sender->psent = m_rtpPacket.GetSequenceNumber();
+        sender->osent = m_rtpPacket.GetSequenceNumber() * m_rtpPacket.GetPayloadSize();
+        receiver = (RTP_ControlFrame::ReceiverReport *)&sender[1];
+    } else {
+        rtcpPacket.SetPayloadType(RTP_ControlFrame::e_ReceiverReport);
+        rtcpPacket.SetPayloadSize(sizeof(PUInt32b) + sizeof(RTP_ControlFrame::ReceiverReport));
+        *(PUInt32b *)rtcpPacket.GetPayloadPtr() = m_syncSource; // SSRC of packet sender
+        receiver = (RTP_ControlFrame::ReceiverReport *)(rtcpPacket.GetPayloadPtr() + sizeof(PUInt32b));
+    }
+    rtcpPacket.SetCount(1);
+    AddReceiverReport(*receiver);
+
+    // SDES with mandatory CNAME
+    rtcpPacket.WriteNextCompound();
+    RTP_ControlFrame::SourceDescription & sdes = rtcpPacket.AddSourceDescription(m_syncSource);
+    rtcpPacket.AddSourceDescriptionItem(sdes, RTP_ControlFrame::e_CNAME, m_cname);
 
     // send random RTCP packet every time
-    for (int i = 0; i < m_rtcpPacket.GetCompoundSize(); i++) {
+    const PINDEX packetSize = rtcpPacket.GetCompoundSize();
+    BYTE * data = rtcpPacket.GetPointer();
+    for (PINDEX i = 0; i < packetSize; ++i) {
         // overwrite n% of the bytes with random values
-        if (PRandom::Number(100) > (100 - m_percentBadRTCP)) {
-            m_rtcpPacket[i] = PRandom::Number(255);
-        }
+        if (PRandom::Number(100) > (100 - m_percentBadRTCP))
+            data[i] = (BYTE)PRandom::Number(255);
     }
 
     PTRACE(2, "Sending fuzzed RTCP to " << remoteMediaControlAddress);
-    m_rtcpSocket.Write(m_rtcpPacket, m_rtcpPacket.GetCompoundSize());
+    m_rtcpSocket.Write(data, packetSize);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
