@@ -249,11 +249,11 @@ class MyH323EndPoint : public H323EndPoint
 
     void SetFuzzing(bool val) { m_fuzzing = val; }
     bool IsFuzzing() const { return m_fuzzing; }
-    void SetPercentBadRTPHeader(unsigned val) { m_percentBadRTPHeader = val; }
+    void SetPercentBadRTPHeader(unsigned val) { m_percentBadRTPHeader = (val > 100) ? 100 : val; }
     unsigned GetPercentBadRTPHeader() const { return m_percentBadRTPHeader; }
-    void SetPercentBadRTPMedia(unsigned val) { m_percentBadRTPMedia = val; }
+    void SetPercentBadRTPMedia(unsigned val) { m_percentBadRTPMedia = (val > 100) ? 100 : val; }
     unsigned GetPercentBadRTPMedia() const { return m_percentBadRTPMedia; }
-    void SetPercentBadRTCP(unsigned val) { m_percentBadRTCP = val; }
+    void SetPercentBadRTCP(unsigned val) { m_percentBadRTCP = (val > 100) ? 100 : val; }
     unsigned GetPercentBadRTCP() const { return m_percentBadRTCP; }
 
     void SetStartH239(bool start) { m_startH239 = start; }

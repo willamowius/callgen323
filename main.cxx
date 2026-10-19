@@ -1554,7 +1554,7 @@ void RTPFuzzingChannel::TransmitRTP(PTimer &, H323_INT)
 
     for (PINDEX i = 0; i < packetSize; ++i) {
         const unsigned percent = (i < headerSize) ? m_percentBadRTPHeader : m_percentBadRTPMedia;
-        if (PRandom::Number(100) > (100 - percent))
+        if (PRandom::Number(99) < percent)
             data[i] = (BYTE)PRandom::Number(255);
     }
 
@@ -1618,7 +1618,7 @@ void RTPFuzzingChannel::TransmitRTCP(PTimer &, H323_INT)
     BYTE * data = rtcpPacket.GetPointer();
     for (PINDEX i = 0; i < packetSize; ++i) {
         // overwrite n% of the bytes with random values
-        if (PRandom::Number(100) > (100 - m_percentBadRTCP))
+        if (PRandom::Number(99) < m_percentBadRTCP)
             data[i] = (BYTE)PRandom::Number(255);
     }
 
