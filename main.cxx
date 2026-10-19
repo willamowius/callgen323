@@ -1300,6 +1300,11 @@ PBoolean MyH323Connection::OpenVideoChannel(PBoolean isEncoding, H323VideoCodec 
   PVideoDevice * device = isEncoding ? (PVideoDevice *)PVideoInputDevice::CreateDeviceByName(deviceName)
                                      : (PVideoDevice *)PVideoOutputDevice::CreateDeviceByName(deviceName);
 
+  if (!device) {
+    PTRACE(1, "Failed to create the video device \"" << deviceName << '"');
+    return FALSE;
+  }
+
   // codec needs a list of possible formats, otherwise the frame size isn't negotiated properly
   if (isEncoding) {
 #if PTLIB_VER >= 2110
@@ -1341,12 +1346,12 @@ PBoolean MyH323Connection::OpenVideoChannel(PBoolean isEncoding, H323VideoCodec 
   unsigned frameHeight = codec.GetHeight();
   PTRACE(1, "Codec says:" << (isEncoding ? " OUT " : " IN ") << frameWidth << "x" << frameHeight);
 
-  if (!device ||
-	  !device->SetFrameSize(codec.GetWidth(), codec.GetHeight()) ||
+  if (!device->SetFrameSize(codec.GetWidth(), codec.GetHeight()) ||
       !device->SetColourFormatConverter("YUV420P") ||
       !device->SetFrameRate(endpoint.GetFrameRate()) ||
       !device->Open(deviceName, TRUE)) {
     PTRACE(1, "Failed to open or configure the video device \"" << deviceName << '"');
+    delete device;
     return FALSE;
   }
 
