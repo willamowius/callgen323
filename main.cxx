@@ -835,9 +835,11 @@ CallThread::CallThread(unsigned _index, const PStringArray & _destinations, cons
 
 static unsigned RandomRange(PRandom & rand, const PTimeInterval & tmin, const PTimeInterval & tmax)
 {
-  unsigned umax = tmax.GetInterval();
-  unsigned umin = tmin.GetInterval();
-  return rand.Generate() % (umax - umin + 1) + umin;
+  PInt64 umax = tmax.GetInterval();
+  PInt64 umin = tmin.GetInterval();
+  if (umax <= umin)
+    return (unsigned)umin;
+  return (unsigned)(rand.Generate() % (umax - umin + 1) + umin);   // 64 bit: range can't wrap to 0
 }
 
 #define START_OUTPUT(index, token) \
