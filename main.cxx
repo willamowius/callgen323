@@ -496,12 +496,19 @@ void CallGen::Main()
                 passphrase = args.GetOptionString("tls-passphrase");
             useTLS = h323->TLS_SetPrivateKey(args.GetOptionString("tls-privkey"), passphrase);
         }
-        WORD tlsListenPort = (WORD)args.GetOptionString("tls-listenport", "1300").AsUnsigned();
+        unsigned tlsListenPort = args.GetOptionString("tls-listenport", "1300").AsUnsigned();
+        if (tlsListenPort == 0 || tlsListenPort > 65535) {
+            cerr << "Invalid --tls-listenport" << endl;
+            return;
+        }
+        if (!args.HasOption("tls-cafile"))
+            cout << "WARNING: no --tls-cafile, peer certificates are NOT verified" << endl;
 
-        if (useTLS && h323->TLS_Initialise(interfaceAddress, tlsListenPort)) {
+        if (useTLS && h323->TLS_Initialise(interfaceAddress, (WORD)tlsListenPort)) {
             cout << "Enabled TLS signal security." << endl;
         } else {
-            cerr << "Could not enable TLS signal security." << endl;
+            cerr << "Could not enable TLS signal security, exiting." << endl;   // don't silently continue in plain text
+            return;
         }
     }
 #endif
@@ -561,8 +568,14 @@ void CallGen::Main()
 
   if (args.HasOption('f'))
     h323->DisableFastStart(TRUE);
-  if (args.HasOption('T'))
-    h323->DisableH245Tunneling(TRUE);
+  if (args.HasOption('T')) {
+#ifdef H323_TLS
+    if (useTLS)
+      cout << "Ignoring -T: H.245 tunneling is required with TLS" << endl;
+    else
+#endif
+      h323->DisableH245Tunneling(TRUE);
+  }
 
 #ifdef H323_H235
   if (args.HasOption("mediaenc"))  {
