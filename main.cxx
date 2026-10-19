@@ -373,6 +373,7 @@ void CallGen::Main()
     WORD interfacePort = 0;
     if (!SplitAddress(interface, interface, interfacePort)) {
       cout << "Could not parse param of -i \"" << interface << "\" to ip address and port." << endl;
+      return;
     }
     if (interfacePort != 0) {
       if (listenPortSet && interfacePort != listenPort) {
