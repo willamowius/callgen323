@@ -1486,6 +1486,9 @@ RTPFuzzingChannel::RTPFuzzingChannel(MyH323EndPoint & ep, H323Connection & conne
 
 RTPFuzzingChannel::~RTPFuzzingChannel()
 {
+    // stop the timers first
+    m_rtpTransmitTimer.Stop(true);
+    m_rtcpTransmitTimer.Stop(true);
     m_rtpSocket.Close();
     m_rtcpSocket.Close();
 }
