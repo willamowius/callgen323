@@ -233,7 +233,7 @@ class MyH323EndPoint : public H323EndPoint
     void SetGatewayPrefixes(const PStringArray & prefixes) { m_gatewayPrefixes = prefixes; }
 
     // sets the bearer capability rate, AdjustVideoCapabilities() applies it to the video capabilities
-    void SetPerCallBandwidth(unsigned bw) { m_perCallBandwidth = bw; m_rateMultiplier = ceil((float)bw / 64); }
+    void SetPerCallBandwidth(unsigned bw) { m_perCallBandwidth = bw; unsigned rate = (unsigned)ceil((float)bw / 64); m_rateMultiplier = (BYTE)(rate > 127 ? 127 : rate); }  // 7 bit field
     unsigned GetPerCallBandwidth() const { return m_perCallBandwidth; }
 #ifdef H323_VIDEO
     // remove video capabilities with a bitrate above the per call bandwidth, set the others to the bandwidth available for video
