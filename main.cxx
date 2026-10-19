@@ -1594,7 +1594,7 @@ void RTPFuzzingChannel::TransmitRTCP(PTimer &, H323_INT)
         sender->ssrc = m_syncSource;
         PTime now;
         sender->ntp_sec = now.GetTimeInSeconds() + SecondsFrom1900to1970; // Convert from 1970 to 1900
-        sender->ntp_frac = now.GetMicrosecond() * 4294; // Scale microseconds to "fraction" from 0 to 2^32
+        sender->ntp_frac = (unsigned)now.GetMicrosecond() * 4294u; // Scale microseconds to "fraction" from 0 to 2^32
         sender->rtp_ts = m_timestamp;
         sender->psent = m_rtpPacket.GetSequenceNumber();
         sender->osent = m_rtpPacket.GetSequenceNumber() * m_rtpPacket.GetPayloadSize();
