@@ -198,6 +198,7 @@ class MyH323Connection : public H323Connection
     MyH323EndPoint & endpoint;
     PVideoChannel * videoChannelIn;
     PVideoChannel * videoChannelOut;
+    PVideoChannel * videoChannelPresentation;   // H.239 channel (either direction)
     map<unsigned, WORD> m_sessionPorts;
     bool m_isH239ready;
     bool m_haveStartedH239;

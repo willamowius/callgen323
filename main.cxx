@@ -1211,6 +1211,7 @@ MyH323Connection::MyH323Connection(MyH323EndPoint & ep, unsigned callRef)
   , endpoint(ep)
   , videoChannelIn(NULL)
   , videoChannelOut(NULL)
+  , videoChannelPresentation(NULL)
   , m_isH239ready(false)
   , m_haveStartedH239(false)
 {
@@ -1221,6 +1222,7 @@ MyH323Connection::~MyH323Connection()
 {
     delete videoChannelIn;
     delete videoChannelOut;
+    delete videoChannelPresentation;
 }
 
 PBoolean MyH323Connection::OnSendSignalSetup(H323SignalPDU & setupPDU)
@@ -1359,13 +1361,15 @@ PBoolean MyH323Connection::OpenVideoChannel(PBoolean isEncoding, H323VideoCodec 
   PTRACE(1, "Device says:" << (isEncoding ? " OUT " : " IN ") << frameWidth << "x" << frameHeight);
 
   if (isEncoding) {
-    videoChannelOut = new PVideoChannel();
-    videoChannelOut->AttachVideoReader((PVideoInputDevice *)device);
-    return codec.AttachChannel(videoChannelOut, false);
+    PVideoChannel *& slot = isH239 ? videoChannelPresentation : videoChannelOut;
+    slot = new PVideoChannel();
+    slot->AttachVideoReader((PVideoInputDevice *)device);
+    return codec.AttachChannel(slot, false);
   } else {
-    videoChannelIn = new PVideoChannel();
-    videoChannelIn->AttachVideoPlayer((PVideoOutputDevice *)device);
-    return codec.AttachChannel(videoChannelIn, false);
+    PVideoChannel *& slot = isH239 ? videoChannelPresentation : videoChannelIn;
+    slot = new PVideoChannel();
+    slot->AttachVideoPlayer((PVideoOutputDevice *)device);
+    return codec.AttachChannel(slot, false);
   }
 }
 
