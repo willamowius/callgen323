@@ -42,6 +42,7 @@ class PlayMessage : public PDelayChannel
     PCLASSINFO(PlayMessage, PDelayChannel);
   public:
     PlayMessage(const PString & filename, unsigned frameDelay, unsigned frameSize);
+    virtual ~PlayMessage() { Close(); }  // detach wavFile before the member is destroyed
     virtual PBoolean Read(void *, PINDEX);
     virtual PBoolean Close();
   protected:
