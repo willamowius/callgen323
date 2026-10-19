@@ -892,7 +892,7 @@ void CallThread::Main()
     // trigger a call
     PString token;
     PTRACE(1, "CallGen\tMaking call to " << destination);
-    unsigned totalAttempts = ++callgen.totalAttempts;
+    unsigned totalAttempts = callgen.IncAttempts();
     if (!callgen.Start(destination, token))
       PError << setw(3) << index << ": Call creation to " << destination << " failed" << endl;
     else {
@@ -1196,7 +1196,7 @@ void MyH323EndPoint::OnConnectionEstablished(H323Connection & connection, const 
   OUTPUT("", token, "Established \"" << TidyRemotePartyName(connection) << "\""
                     " " << connection.GetControlChannel().GetRemoteAddress() <<
                     " active=" << connectionsActive.GetSize() <<
-                    " total=" << ++CallGen::Current().totalEstablished);
+                    " total=" << CallGen::Current().IncEstablished());
 }
 
 void MyH323EndPoint::OnConnectionCleared(H323Connection & connection, const PString & token)

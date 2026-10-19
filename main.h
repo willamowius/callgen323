@@ -347,6 +347,10 @@ class CallGen : public PProcess
     unsigned   totalAttempts;
     unsigned   totalEstablished;
     PMutex     coutMutex;
+    PMutex     statsMutex;      // protects totalAttempts / totalEstablished
+
+    unsigned IncAttempts() { PWaitAndSignal lock(statsMutex); return ++totalAttempts; }
+    unsigned IncEstablished() { PWaitAndSignal lock(statsMutex); return ++totalEstablished; }
 
     MyH323EndPoint * h323;
 
